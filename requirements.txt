@@ -1,0 +1,7 @@
+# requirements.txt
+
+reflex>=0.1.2
+pandas
+sqlalchemy
+fastapi
+uvicorn

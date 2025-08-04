@@ -1,0 +1,3 @@
+id,portfolio_id,name,phase,start_date,end_date,priority_score
+1,1,Study A,Phase I,2025-01-15,2025-06-30,8
+2,2,Study B,Phase II,2025-03-01,2025-12-31,5

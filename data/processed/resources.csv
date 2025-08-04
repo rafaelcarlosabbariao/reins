@@ -1,0 +1,4 @@
+ntid,name,role,function,vendor_flag
+jsmith,John Smith,CRA,Oncology,False
+adoe,Alice Doe,Data Manager,Vaccines,False
+btaylor,Bob Taylor,Project Manager,IM/I&I,True
