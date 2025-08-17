@@ -54,17 +54,17 @@ def view() -> rx.Component:
     )
 
     kpis = rx.grid(
-        metric_card("Active Trials", State.portfolio_active_trials, f"{State.portfolio_in_planning} in planning", "/icons/lab.svg"),
+        metric_card("Active Trials", State.portfolio_active_trials, f"{State.portfolio_in_planning} in planning", "/icons/microscope.svg"),
         metric_card("Total Resources", State.portfolio_total_resources, f"{State.portfolio_fte_share}% FTE, {State.portfolio_fsp_share}% FSP", "/icons/resources.svg"),
-        metric_card("Avg Utilization", f"{State.portfolio_avg_util}%", "Balanced workload", "/icons/analytics.svg"),
-        columns="3", gap="4", width="100%",
+        metric_card("Avg Utilization", f"{State.portfolio_avg_util}%", "Balanced workload", "/icons/balance.svg"),
+        columns="3", spacing="4", width="100%",
     )
 
     filters = rx.card(filter_bar(), padding="0.75rem", radius="xl", shadow="sm", width="100%")
 
     content = rx.grid(
-        rx.box(trial_list(), width="100%"),
-        rx.box(right_panel(), width="100%"),
+        rx.box(trial_list(), width="30%"),
+        rx.box(right_panel(), width="70%"),
         columns="2", gap="4", width="100%", align="start",
     )
 

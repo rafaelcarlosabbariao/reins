@@ -24,7 +24,7 @@ def metric_card(title: str, value: str | int, subtitle: str = "", icon: str | No
             align="center",
             width="100%",
         ),
-        padding="1rem",
+        padding="2rem",
         radius="xl",
         shadow="sm",
         width="100%",
