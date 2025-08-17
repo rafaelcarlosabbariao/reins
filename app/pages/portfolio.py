@@ -39,7 +39,7 @@ def selected_view() -> rx.Component:
     )
 
 def right_panel() -> rx.Component:
-    return rx.cond(State.has_selection, empty_selection(), selected_view())
+    return rx.cond(State.has_selection, selected_view(), empty_selection())
 
 def view() -> rx.Component:
     header = rx.vstack(

@@ -1,48 +1,77 @@
+# app/components/portfolio/resource_list.py
 import reflex as rx
 from app.state import AppState as State
 
-def _row(r: dict) -> rx.Component:
+def _row(r) -> rx.Component:
     return rx.card(
         rx.hstack(
-            rx.hstack(
-                rx.box(
-                    rx.text(r["name"][0], weight="bold", color="white"),
-                    width="36px", height="36px", background="#CBD5E1",
-                    display="grid", place_items="center", radius="full",
-                ),
-                rx.vstack(
-                    rx.text(r["name"], weight="medium"),
-                    rx.text(f'{r["role"]} · {r["type"]} · {r["dept"]}', size="1", color="gray"),
-                    spacing="0.1rem", align="start",
-                ),
-                gap="0.75rem", align="center",
-            ),
-            rx.spacer(),
+            # Left: name + role/type/dept
             rx.vstack(
-                rx.text(f'{r["util"]}%', size="2", weight="bold"),
-                rx.box(
-                    rx.box(width=f'{r["util"]}%', height="6px", background="#2563EB", radius="full"),
-                    width="120px", height="6px", background="#E5E7EB", radius="full",
+                rx.text(r["name"], weight="medium"),
+                rx.text(
+                    rx.fragment(
+                        r["role"], " · ",
+                        r["type"], " · ",
+                        r["dept"]
+                    ),
+                    size="1",
+                    color="gray",
                 ),
-                rx.text(r["range"], size="1", color="gray"),
-                spacing="0.25rem", align="end",
+                spacing="1",
+                align="start",
+                width="100%",
             ),
-            align="center", width="100%",
+
+            rx.spacer(),
+
+            # Right: utilization and progress bar + date range
+            rx.vstack(
+                rx.text(
+                    rx.fragment(r["util"], "%"),
+                    size="2",
+                    weight="bold",
+                ),
+                # Use a progress component to avoid string concat for CSS width
+                rx.progress(value=r["util"], max=100, width="160px"),
+                rx.text(r["range"], size="1", color="gray"),
+                spacing="1",
+                align="end",
+            ),
+
+            align="center",
+            width="100%",
+            gap="3",
         ),
-        padding="0.5rem", radius="xl", shadow="sm", width="100%",
+        padding="0.75rem",
+        radius="xl",
+        shadow="sm",
+        width="100%",
+        _hover={"boxShadow": "0 8px 18px rgba(0,0,0,0.08)"},
     )
 
+
 def resource_list() -> rx.Component:
-    rows = rx.cond(
-        State.has_selection,
-        rx.box(),
-        rx.vstack(*[ _row(r) for r in State.sel_alloc["resources"] ], spacing="2", width="100%"),
-    )
+    """Allocated resources list. Uses rx.foreach over Var list."""
     return rx.card(
         rx.vstack(
             rx.text("Allocated Resources Detail", size="3", weight="bold"),
-            rows,
-            spacing="3", width="100%", align="start",
+
+            rx.cond(
+                State.has_selection,
+                rx.vstack(
+                    rx.foreach(State.sel_resources, lambda r: _row(r)),
+                    spacing="2", 
+                    width="100%",
+                ),
+                rx.box(),  # nothing if no selection
+            ),
+
+            spacing="3",
+            width="100%",
+            align="start",
         ),
-        padding="0.75rem", radius="xl", shadow="sm", width="100%",
+        padding="0.75rem",
+        radius="xl",
+        shadow="sm",
+        width="100%",
     )

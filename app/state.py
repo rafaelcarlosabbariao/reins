@@ -1,6 +1,21 @@
 import reflex as rx
 from datetime import date
-from typing import Optional
+from typing import Optional, List, TypedDict
+import plotly.graph_objects as go
+
+class ResourceItem(TypedDict):
+    name: str
+    role: str
+    type: str
+    dept: str
+    util: int
+    hours_week: int
+    range: str
+
+class SiteItem(TypedDict):
+    lat: float
+    lon: float
+    label: str
 
 class AppState(rx.State):
     # Sidebar resource ratios 
@@ -234,6 +249,70 @@ class AppState(rx.State):
             return None
         return self.allocations.get(t["id"])
 
+    @rx.var
+    def sel_resource_type_fig(self) -> Optional[go.Figure]:
+        alloc = self.sel_alloc
+        if not alloc:
+            return None
+        data = alloc["resource_type"]  # {'FTE': 51, 'FSP': 49}
+        labels, values = list(data.keys()), list(data.values())
+        fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.6, textinfo="none")])
+        fig.update_layout(
+            title="Resource Type Distribution",
+            margin=dict(l=10, r=10, t=40, b=10),
+            legend=dict(orientation="h", y=-0.1),
+            height=300,
+        )
+        return fig
+
+    @rx.var
+    def sel_functional_area_fig(self) -> Optional[go.Figure]:
+        alloc = self.sel_alloc
+        if not alloc:
+            return None
+        data = alloc["functional_area"]  # e.g., {'Clinical Ops': 60, ...}
+        labels, values = list(data.keys()), list(data.values())
+        fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.6, textinfo="none")])
+        fig.update_layout(
+            title="Functional Area Distribution",
+            margin=dict(l=10, r=10, t=40, b=10),
+            legend=dict(orientation="h", y=-0.1),
+            height=300,
+        )
+        return fig
+
+    @rx.var
+    def sel_hours_by_dept_fig(self) -> Optional[go.Figure]:
+        alloc = self.sel_alloc
+        if not alloc:
+            return None
+        data = alloc["hours_by_dept"]   # {'Clinical Operations': 15, ...}
+        labels, values = list(data.keys()), list(data.values())
+        fig = go.Figure(data=[go.Bar(x=labels, y=values)])
+        fig.update_layout(
+            title="Hours by Department",
+            margin=dict(l=10, r=10, t=40, b=10),
+            height=320,
+        )
+        return fig
+    
+    @rx.var
+    def sel_resources(self) -> List[ResourceItem]:
+        """Typed list for foreach."""
+        alloc = self.sel_alloc
+        if not alloc:
+            return []
+        # mypy/pyright will see this as List[ResourceItem]
+        return list(alloc["resources"])
+
+    @rx.var
+    def sel_sites(self) -> List[SiteItem]:
+        """Optional: typed sites list if you need to iterate later."""
+        alloc = self.sel_alloc
+        if not alloc:
+            return []
+        return list(alloc["sites"])
+    
     # ===== Footer Card ===== #
     # Footer user card 
     user_initials: str = "RA"

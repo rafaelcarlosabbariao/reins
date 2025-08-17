@@ -22,7 +22,7 @@ def sites_map() -> rx.Component:
                         background="#E8F5E9",
                         color="#147D2B",
                     ),
-                    rx.badge(State.sel_sites_count_label, size="2"),
+                    rx.badge(State.sel_sites_counts_label, size="2"),
                     align="center",
                     width="100%",
                     wrap="wrap",
@@ -30,6 +30,7 @@ def sites_map() -> rx.Component:
                 ),
                 # Body (map placeholder)
                 rx.box(
+                    rx.text("Map placeholder (Leaflet/Mapbox here)", color="gray"),
                     height="22rem",
                     width="100%",
                     background="#F8FAFC",
@@ -37,7 +38,6 @@ def sites_map() -> rx.Component:
                     radius="lg",
                     display="grid",
                     place_items="center",
-                    children=rx.text("Map placeholder (Leaflet/Mapbox here)", color="gray"),
                 ),
                 spacing="3",
                 width="100%",
