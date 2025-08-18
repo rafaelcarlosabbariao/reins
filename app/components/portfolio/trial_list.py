@@ -8,7 +8,7 @@ def _status_badge(status: rx.Var) -> rx.Component:
     return rx.cond(
         (status == "Ongoing"),
         rx.box(
-            rx.text(status, size="2", weight="medium", color="#059669"),
+            rx.text(status, size="1", weight="regular", color="#059669"),
             padding_x="8px",
             padding_y="4px",
             border_radius="9999px",
@@ -17,14 +17,14 @@ def _status_badge(status: rx.Var) -> rx.Component:
         rx.cond(
             (status == "Planning"),
             rx.box(
-                rx.text(status, size="2", weight="medium", color="#F59E0B"),
+                rx.text(status, size="1", weight="regular", color="#F59E0B"),
                 padding_x="8px",
                 padding_y="4px",
                 border_radius="9999px",
                 style={"background": "#FEF3C7"},
             ),
             rx.box(
-                rx.text(status, size="2", weight="medium", color="#334155"),
+                rx.text(status, size="1", weight="regular", color="#334155"),
                 padding_x="8px",
                 padding_y="4px",
                 border_radius="9999px",
@@ -35,7 +35,7 @@ def _status_badge(status: rx.Var) -> rx.Component:
 
 def _phase_pill(phase: rx.Var) -> rx.Component:
     return rx.box(
-        rx.text(phase, size="2", weight="medium", color="#475569"),
+        rx.text(phase, size="1", weight="regular", color="#475569"),
         padding_x="8px",
         padding_y="4px",
         border_radius="9999px",
@@ -44,7 +44,7 @@ def _phase_pill(phase: rx.Var) -> rx.Component:
 
 def _protocol_badge(pid: rx.Var) -> rx.Component:
     return rx.box(
-        rx.text(pid, size="2", weight="medium", color="#475569"),
+        rx.text(pid, size="1", weight="regular", color="#475569"),
         padding_x="8px",
         padding_y="4px",
         border_radius="8px",
@@ -52,13 +52,27 @@ def _protocol_badge(pid: rx.Var) -> rx.Component:
     )
 
 def _bullet() -> rx.Component:
-    return rx.text("•", size="2", color="#CBD5E1")
+    return rx.text("•", size="1", color="#CBD5E1")
+
+def _resource_count_pill(count_var: rx.Var) -> rx.Component:
+    return rx.box(
+        rx.hstack(
+            rx.icon(tag="users", size=14, color="#64748B"),
+            rx.text(count_var, size="1", weight="regular", color="#475569"),
+            spacing="1",
+            align="center",
+        ),
+        padding_x="8px",
+        padding_y="4px",
+        border_radius="9999px",
+        style={"background": "#F1F5F9"},
+    )
 
 # --- individual trial card ----------------------------------------------------
 def trial_card(t: dict) -> rx.Component:
     # selection indicator uses reactive expression with '=='
     selected_bar = rx.cond(
-        (State.selected_trial_id == t["id"]),
+        (State.selected_trial_id == t["protocol_id"]),
         rx.box(position="absolute", left="0", top="0", bottom="0", width="3px", bg="#3B82F6"),
     )
 
@@ -71,7 +85,7 @@ def trial_card(t: dict) -> rx.Component:
                         rx.text(t["title"], weight="bold", color="#0F172A"),
                         href="#",
                         # important: call the action directly (no lambda)
-                        on_click=State.select_trial(t["id"]),
+                        on_click=State.select_trial(t["protocol_id"]),
                     ),
                     spacing="1",
                     align="start",
@@ -89,10 +103,13 @@ def trial_card(t: dict) -> rx.Component:
                 _status_badge(t["status"]),
                 _bullet(),
                 _protocol_badge(t["protocol_id"]),
+                _bullet(),
                 _phase_pill(t["phase"]),
-                spacing="3",
+                _bullet(),
+                _resource_count_pill(t.get("resource_count", 0)),
+                spacing="2",
                 align="center",
-                wrap="wrap",
+                # wrap="wrap",
             ),
             spacing="2",
             align="start",
@@ -121,7 +138,7 @@ def trials_panel() -> rx.Component:
             ),
             rx.scroll_area(
                 rx.vstack(
-                    rx.foreach(State.filtered_trials, lambda t: trial_card(t)),
+                    rx.foreach(State.filtered_trials_with_counts, lambda t: trial_card(t)),
                     spacing="4",
                     width="100%",
                     align="stretch",

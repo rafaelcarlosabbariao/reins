@@ -212,6 +212,23 @@ class AppState(rx.State):
             if str(t.get("id", "")) == target or str(t.get("protocol_id", "")) == target:
                 return t
         return None
+    
+    @rx.var
+    def filtered_trials_with_counts(self) -> list[dict]:
+        by_pid: dict[str, set[str]] = {}
+        for a in self.allocations:
+            pid = str(a.get("trial_id", "")).strip()
+            rid = str(a.get("resource_id", "")).strip()
+            if pid and rid:
+                by_pid.setdefault(pid, set()).add(rid)
+
+        # Attach resource_count to each filtered trial (by protocol_id)
+        out: list[dict] = []
+        for t in self.filtered_trials:
+            pid = str(t.get("protocol_id", "")).strip()
+            cnt = len(by_pid.get(pid, set()))
+            out.append({**t, "resource_count": cnt})
+        return out
 
     # ---------- KPI atoms (scalars only; no nested dicts) ----------
     # TODO - Update these to be reactive using data
@@ -298,6 +315,7 @@ class AppState(rx.State):
 
     @rx.var
     def selected_resource_ids(self) -> List[str]:
+        # TODO - update resource_id to use actual NTIDs and not names
         ids = []
         for a in self.selected_allocations:
             rid = a.get("resource_id")
@@ -371,6 +389,137 @@ class AppState(rx.State):
     def selected_underutilized(self) -> int:
         return sum(1 for u in self._per_resource_util_list if u < 30.0)
 
+    # ---------- Resource Type split
+    @rx.var
+    def selected_type_counts(self) -> dict:
+        if not self.selected_resource_ids:
+            return {"fte": 0, "fsp": 0}
+        
+        # build id -> type lookup from Resource.csv
+        typ = {str(r.get("name")): str(r.get("type", "")).upper() for r in self.resources if "name" in r and "type" in r}
+        fte = 0
+        fsp = 0
+
+        for rid in self.selected_resource_ids:
+            t = typ.get(str(rid), "")
+            if t == "FTE":
+                fte += 1
+            else:
+                # Bucket ANY non-FTE as FSP/Contractor (e.g., "FSP", "CONTRACTOR", blanks)
+                fsp += 1
+        return {"fte": fte, "fsp": fsp}
+
+    @rx.var
+    def selected_fte_pct(self) -> int:
+        c = self.selected_type_counts
+        denom = c["fte"] + c["fsp"]
+        return round(100 * c["fte"] / denom) if denom else 0
+
+    @rx.var
+    def selected_fsp_pct(self) -> int:
+        c = self.selected_type_counts
+        denom = c["fte"] + c["fsp"]
+        return 100 - self.selected_fte_pct if denom else 0
+
+    @rx.var
+    def selected_type_donut_bg(self) -> str:
+        """CSS conic-gradient for the donut (with a 1% white gap)."""
+        if self.selected_allocated_resources_count == 0:
+            return "conic-gradient(#E5E7EB 0 100%)"
+        f = max(0, min(100, self.selected_fte_pct))
+        g1 = f
+        g2 = min(100, f + 1)  # 1% white gap
+        return f"conic-gradient(#3B82F6 0 {g1}%, #FFFFFF {g1}% {g2}%, #10B981 {g2}% 100%)"        
+
+    # ---------- Functional Area (Role) distribution for selected trial ----------
+    @rx.var
+    def selected_functional_breakdown(self) -> list[dict]:
+        """
+        Weighted hours by functional area (role) for the *selected* trial,
+        using selected_resource_ids (not selected_allocations).
+
+        Hours source, in order of preference:
+          - Allocation.weekly_hours  (if present)
+          - Allocation.allocation_percentage × Resource.capacity (if both present)
+        Only uses columns that exist in your CSVs.
+        """
+        pid = self.selected_trial_id
+        if not pid or not self.selected_resource_ids:
+            return []
+
+        # Fast membership check for the selected resources.
+        selected_rids = {str(rid) for rid in self.selected_resource_ids}
+
+        # Lookups from Resource.csv (only if columns exist).
+        cap_lookup = {str(r.get("name")): float(r.get("capacity") or 0.0)
+                      for r in self.resources if "id" in r and "capacity" in r}
+        role_lookup = {str(r.get("name")): (str(r.get("role")) or "Unknown")
+                       for r in self.resources if "id" in r and "role" in r}
+
+        # Determine which allocation fields we actually have.
+        has_hours = any("weekly_hours" in a for a in self.allocations)
+        has_pct   = any("allocation_percentage" in a for a in self.allocations)
+
+        # Aggregate hours per *selected* resource, for the *selected* protocol.
+        hours_by_res: dict[str, float] = {}
+        for a in self.allocations:
+            if str(a.get("trial_id", "")) != str(pid):
+                continue
+            rid = str(a.get("resource_id", "")).strip()
+            if rid not in selected_rids:
+                continue
+
+            val = 0.0
+            if has_hours and "weekly_hours" in a:
+                val = float(a.get("weekly_hours") or 0.0)
+            elif has_pct and "allocation_percentage" in a and rid in cap_lookup:
+                pct = float(a.get("allocation_percentage") or 0.0)
+                val = (pct / 100.0) * cap_lookup.get(rid, 0.0)
+
+            if val:
+                hours_by_res[rid] = hours_by_res.get(rid, 0.0) + val
+
+        if not hours_by_res:
+            return []
+
+        # Roll up hours by functional area (role).
+        by_role: dict[str, float] = {}
+        for rid, hrs in hours_by_res.items():
+            role = role_lookup.get(rid, "Unknown")
+            by_role[role] = by_role.get(role, 0.0) + hrs
+
+        items = [{"label": k, "hours": v} for k, v in by_role.items()]
+        items.sort(key=lambda x: x["hours"], reverse=True)
+        return items
+    
+    @rx.var
+    def selected_functional_breakdown_colored(self) -> list[dict]:
+        """Breakdown + color + pct for legend (derived from selected_resource_ids)."""
+        data = self.selected_functional_breakdown
+        total = sum(d["hours"] for d in data) or 1.0
+        palette = ["#10B981", "#3B82F6", "#E11D48", "#F59E0B", "#7C3AED", "#06B6D4", "#A3E635"]
+        out = []
+        for i, d in enumerate(data):
+            pct = int(round(100.0 * d["hours"] / total))
+            out.append({**d, "pct": pct, "color": palette[i % len(palette)]})
+        return out
+
+    @rx.var
+    def selected_functional_pie_bg(self) -> str:
+        """CSS conic-gradient for the functional-area pie."""
+        data = self.selected_functional_breakdown_colored
+        if not data:
+            return "conic-gradient(#E5E7EB 0 100%)"
+        total = sum(d["hours"] for d in data) or 1.0
+        start = 0.0
+        segments = []
+        for d in data:
+            share = (d["hours"] / total) * 100.0
+            end = start + share
+            segments.append(f"{d['color']} {start:.4f}% {end:.4f}%")
+            start = end
+        return f"conic-gradient({', '.join(segments)})"
+    
     # ---------- Footer ----------
     user_initials: str = "RA"
     user_name: str = "Rafael Abbariao"

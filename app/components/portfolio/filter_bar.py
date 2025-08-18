@@ -17,13 +17,22 @@ def _chip_select(
             value=value,
             on_change=on_change,
             placeholder=placeholder,
+            # keep using the simple select; style the visible control here
+            size="2",
+            radius="full",
             width="100%",
+            # these props land on the trigger in the simple API
+            color="#0F172A",           # text color
+            bg="#FFFFFF",              # background
+            border="1px solid #E2E8F0",
+            box_shadow="0 1px 2px rgba(15,23,42,0.05)",
+            padding="6px 10px",
+            # make placeholder and states consistent
+            _placeholder={"color": "#0F172A"},
+            _hover={"bg": "#FFFFFF"},
+            _active={"bg": "#FFFFFF"},
+            _focus={"bg": "#FFFFFF", "outline": "none", "boxShadow": "0 0 0 1px #93C5FD"},
         ),
-        padding_x="10px",
-        padding_y="8px",
-        border_radius="10px",
-        box_shadow="inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 2px 6px rgba(255, 255, 255, 1.05)",
-        bg="white",
         width="100%",
     )
 
@@ -34,7 +43,7 @@ def filter_bar() -> rx.Component:
         padding_x="12px",
         padding_y="10px",
         border_radius="10px",
-        box_shadow="inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 2px 6px rgba(255, 255, 255, 1.05)",
+        box_shadow="inset 0 1px 2px rgba(15,23,42,0.05)",
         bg="white",
     )
 
@@ -64,8 +73,8 @@ def filter_bar() -> rx.Component:
             row_gap="3"
     ),
     bg="#F8FBFF",
-    padding="12px",
+    padding="10px",
     border_radius="12px",
-    box_shadow="0 2px 12px rgba(15,23,42,0.06)",
+    box_shadow="0 6px 18px rgba(15,23,42,0.06)",
     width="100%",
     )

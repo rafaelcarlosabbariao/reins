@@ -6,6 +6,8 @@ from app.components.portfolio.kpi_card import kpi_card
 from app.components.portfolio.trial_list import trials_panel
 from app.components.portfolio.filter_bar import filter_bar
 from app.components.portfolio.resource_summary import resource_summary_strip
+from app.components.portfolio.resource_type_donut import resource_type_donut
+from app.components.portfolio.functional_area_pie import functional_area_pie
 
 def portfolio_header() -> rx.Component:
     return rx.hstack(
@@ -124,7 +126,18 @@ def main_content() -> rx.Component:
         rx.cond(
             (State.selected_trial_id == None),
             trial_placeholder(),
-            resource_summary_strip(),
+            rx.vstack(
+                resource_summary_strip(),
+                rx.grid(
+                    resource_type_donut(),
+                    functional_area_pie(),
+                    columns=rx.breakpoints({"base":"1", "md":"2"}),
+                    spacing="4",
+                    width="100%",
+                ),
+                spacing="4",
+                width="100%",
+            ),
         ),
         spacing="4",
         align="start",

@@ -40,11 +40,11 @@ def resource_summary_strip() -> rx.Component:
     # Header title: either plain label or "Resource Analytics: <trial title>"
     header_title = rx.cond(
         (State.selected_trial_id == None),
-        rx.text("Resource Analytics", weight="bold", color="#64748B"),
+        rx.text("Resource Analytics", weight="bold", color="black"),
         rx.hstack(
-            rx.text("Resource Analytics: ", weight="bold", color="#64748B"),
+            rx.text("Resource Analytics: ", weight="bold", color="black"),
             # Use separate text node for the reactive title (no string + Var)
-            rx.text(State.selected_trial["title"], weight="bold"),
+            rx.text(State.selected_trial["title"], weight="bold", color="black"),
             align="center",
             spacing="1",
         ),
