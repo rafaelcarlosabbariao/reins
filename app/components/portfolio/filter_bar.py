@@ -22,7 +22,7 @@ def _chip_select(
         padding_x="10px",
         padding_y="8px",
         border_radius="10px",
-        box_shadow="inset 0 0 0 1px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.06)",
+        box_shadow="inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 2px 6px rgba(255, 255, 255, 1.05)",
         bg="white",
         width="100%",
     )
@@ -34,7 +34,7 @@ def filter_bar() -> rx.Component:
         padding_x="12px",
         padding_y="10px",
         border_radius="10px",
-        box_shadow="inset 0 0 0 1px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.06)",
+        box_shadow="inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 2px 6px rgba(255, 255, 255, 1.05)",
         bg="white",
     )
 

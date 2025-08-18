@@ -18,6 +18,7 @@ class AppState(rx.State):
     # ---------- Data in memory ----------
     trials: List[Dict] = []
     resources: List[Dict] = []
+    allocations: List[Dict] = []
 
     # ---------- Selection for Trials panel ----------
     selected_trial_id: str | None = None
@@ -72,7 +73,9 @@ class AppState(rx.State):
 
         t = safe_csv("Trial.csv")
         r = safe_csv("Resource.csv")
+        a = safe_csv("Allocation.csv")
 
+        # Trials
         if not t.empty:
             keep_t = [
                 "id", "title", "protocol_id", "phase", "therapeutic_area", "status",
@@ -83,11 +86,41 @@ class AppState(rx.State):
         else:
             self.trials = []
 
+        # Resources
         if not r.empty:
-            keep_r = ["id", "name", "type", "role", "utilization"]
-            self.resources = r[[c for c in keep_r if c in r.columns]].fillna(0).to_dict("records")
+            allowed_r = ["id", "name", "type", "role", "utilization", "capacity"]
+            cols = [c for c in allowed_r if c in r.columns]
+            df_r = r[cols].copy()
+            # numeric coercion only when present
+            for num in ("utilization", "capacity"):
+                if num in df_r.columns:
+                    df_r[num] = pd.to_numeric(df_r[num], errors="coerce").fillna(0.0)
+            if "id" in df_r.columns:
+                df_r["id"] = df_r["id"].astype(str)
+            self.resources = df_r.to_dict("records")
         else:
             self.resources = []
+
+        # Allocations
+        if not a.empty:
+            allowed_a = [
+                "trial_id", "protocol_id", "resource_id",
+                "weekly_hours", "allocation_percentage",
+                "role", "type", "start_date", "end_date",
+            ]
+            cols = [c for c in allowed_a if c in a.columns]
+            df_a = a[cols].copy()
+            # numeric coercion only when present
+            for num in ("weekly_hours", "allocation_percentage"):
+                if num in df_a.columns:
+                    df_a[num] = pd.to_numeric(df_a[num], errors="coerce").fillna(0.0)
+            # stringify ids
+            for idc in ("trial_id", "protocol_id", "resource_id"):
+                if idc in df_a.columns:
+                    df_a[idc] = df_a[idc].astype(str)
+            self.allocations = df_a.to_dict("records")
+        else:
+            self.allocations = []
 
         # No default trial selected 
         self.selected_trial_id = None
@@ -113,7 +146,7 @@ class AppState(rx.State):
     def set_department_(self, value: str): self.department = value
 
     def select_trial(self, trial_id: str):
-        self.selected_trial_id = trial_id
+        self.selected_trial_id = str(trial_id)
 
     def clear_selection(self):
         self.selected_trial_id = None
@@ -173,7 +206,12 @@ class AppState(rx.State):
         """Current selected trial (falls back to first filtered trial) or None if nothing selected (default)"""
         if not self.selected_trial_id:
             return None
-        return next((t for t in set.filtered_trials if t.get("id") == self.selected_trial_id), None)
+        target = str(self.selected_trial_id)
+
+        for t in self.filtered_trials:
+            if str(t.get("id", "")) == target or str(t.get("protocol_id", "")) == target:
+                return t
+        return None
 
     # ---------- KPI atoms (scalars only; no nested dicts) ----------
     # TODO - Update these to be reactive using data
@@ -227,6 +265,111 @@ class AppState(rx.State):
             else "Balanced workload" if self.avg_util <= 70
             else "High load"
         )
+
+    # ---------- Trial Resource Summary (selected trial in Portfolio) ---------
+    @rx.var
+    def selected_protocol(self) -> str: 
+        return self.selected_trial.get("protocol_id") if self.selected_trial else ""
+    
+    @rx.var
+    def selected_phase(self) -> str:
+        return self.selected_trial.get("phase") if self.selected_trial else ""
+    
+    @rx.var
+    def selected_area(self) -> str:
+        return self.selected_trial.get("therapeutic_area") if self.selected_trial else ""
+    
+    @rx.var
+    def selected_allocations(self) -> List[Dict]:
+        """
+        Allocations for the selected trial. Tries trial_id first then protocol_id
+        """
+        if not self.selected_trial:
+            return []
+        tid = str(self.selected_trial.get("id", ""))
+        pid = str(self.selected_trial.get("protocol_id", ""))
+        out: List[Dict] = []
+        for a in self.allocations:
+            a_tid = str(a.get("trial_id", ""))
+            a_pid = str(a.get("protocol_id", ""))
+            if (tid and a_tid == tid) or (pid and (a_pid == pid or a_tid == pid)):
+                out.append(a)
+        return out
+
+    @rx.var
+    def selected_resource_ids(self) -> List[str]:
+        ids = []
+        for a in self.selected_allocations:
+            rid = a.get("resource_id")
+            if rid is not None:
+                ids.append(str(rid))
+        return sorted(set(ids))
+
+    @rx.var
+    def selected_allocated_resources_count(self) -> int:
+        return len(self.selected_resource_ids)
+
+    # Resource utilization metrics
+
+    @rx.var
+    def selected_weekly_hours(self) -> int:
+        allocs = self.selected_allocations
+        if not allocs:
+            return 0
+
+        # 1) Direct weekly_hours if present
+        if "weekly_hours" in (allocs[0].keys() if allocs else {}):
+            total = sum(float(a.get("weekly_hours") or 0.0) for a in allocs)
+            return int(round(total))
+
+    @rx.var
+    def _per_resource_util_list(self) -> List[float]:
+        """Derived per-resource utilization % using ONLY present columns."""
+        allocs = self.selected_allocations
+        if not allocs:
+            return []
+
+        caps = {str(r.get("id")): float(r.get("capacity") or 0.0)
+                for r in self.resources if "id" in r and "capacity" in r}
+        base_util = {str(r.get("id")): float(r.get("utilization") or 0.0)
+                     for r in self.resources if "id" in r and "utilization" in r}
+
+        has_hours = any("weekly_hours" in a for a in allocs)
+        has_pct   = any("allocation_percentage" in a for a in allocs)
+
+        by_res: dict[str, dict[str, float]] = {}
+        for a in allocs:
+            rid = str(a.get("resource_id", ""))
+            if rid not in by_res:
+                by_res[rid] = {"hours": 0.0, "pct": 0.0}
+            if "weekly_hours" in a:
+                by_res[rid]["hours"] += float(a.get("weekly_hours") or 0.0)
+            if "allocation_percentage" in a:
+                by_res[rid]["pct"] += float(a.get("allocation_percentage") or 0.0)
+
+        utils: List[float] = []
+        for rid, agg in by_res.items():
+            cap = caps.get(rid, 0.0)
+            if has_hours and cap > 0:
+                u = (agg["hours"] / cap) * 100.0
+            elif has_pct:
+                u = agg["pct"]                    # already a percent
+            else:
+                u = base_util.get(rid, 0.0)       # fallback to resource.utilization if present
+            utils.append(max(0.0, u))
+        return utils
+
+    @rx.var
+    def selected_avg_util(self) -> int:
+        vals = self._per_resource_util_list
+        return int(round(sum(vals) / len(vals))) if vals else 0
+
+    @rx.var
+    def selected_overallocated(self) -> int:
+        return sum(1 for u in self._per_resource_util_list if u > 100.0)
+
+    def selected_underutilized(self) -> int:
+        return sum(1 for u in self._per_resource_util_list if u < 30.0)
 
     # ---------- Footer ----------
     user_initials: str = "RA"

@@ -5,6 +5,7 @@ from app.state import AppState as State
 from app.components.portfolio.kpi_card import kpi_card
 from app.components.portfolio.trial_list import trials_panel
 from app.components.portfolio.filter_bar import filter_bar
+from app.components.portfolio.resource_summary import resource_summary_strip
 
 def portfolio_header() -> rx.Component:
     return rx.hstack(
@@ -48,7 +49,7 @@ def trials_search_box() -> rx.Component:
         padding_x="12px",
         padding_y="10px",
         border_radius="10px",
-        box_shadow="inset 0 0 0 1px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.06)",
+        box_shadow="inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 2px 6px rgba(255, 255, 255, 0.85)",
         bg="white",
         width="100%",
     )
@@ -123,7 +124,7 @@ def main_content() -> rx.Component:
         rx.cond(
             (State.selected_trial_id == None),
             trial_placeholder(),
-            rx.box(),
+            resource_summary_strip(),
         ),
         spacing="4",
         align="start",
