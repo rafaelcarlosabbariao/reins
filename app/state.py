@@ -1,324 +1,237 @@
+# app/state.py
+from __future__ import annotations
 import reflex as rx
 from datetime import date
-from typing import Optional, List, TypedDict
-import plotly.graph_objects as go
-
-class ResourceItem(TypedDict):
-    name: str
-    role: str
-    type: str
-    dept: str
-    util: int
-    hours_week: int
-    range: str
-
-class SiteItem(TypedDict):
-    lat: float
-    lon: float
-    label: str
+from pathlib import Path
+from typing import Optional, List, Dict
+import pandas as pd
 
 class AppState(rx.State):
-    # Sidebar resource ratios 
-    fte_pct: int = 60
-    fsp_pct: int = 40
+    # ---------- Filters ----------
+    query: str = ""
+    phase: str = "All"
+    priority: str = "All"
+    therapeutic_area: str = "All"
+    status: str = "All"
+    department: str = "All"
 
-    kpis = {
-        "Flex Ratio": "—",
-        "Utilization": "—",
-        "Late-Phase %": "—",
-        "Headcount Gap": "—",
-    }
+    # ---------- Data in memory ----------
+    trials: List[Dict] = []
+    resources: List[Dict] = []
 
-    # Return a JSON-seriazable dict of the state
-    @rx.var
-    def kpi_pairs(self) -> list[list[str]]:
-        return [[k, v] for k, v in self.kpis.items()]
+    # ---------- Selection for Trials panel ----------
+    selected_trial_id: str | None = None
 
-    # ====== Home Page Data ===== #
-
-    # Pipeline data
+    # ---------- Home Page ----------
     pipeline_snapshot_asof: str = date.today().strftime("%B %d, %Y")
     phase_counts: list[dict] = [
-        {"label": "Phase 1", "phase": "P1", "value":9},
-        {"label": "Phase 2", "phase": "P2", "value":8},
-        {"label": "Phase 3", "phase": "P3", "value":7},
-        {"label": "Registration", "phase": "REG", "value":2}
+        {"label": "Phase 1", "phase": "P1", "value": 9},
+        {"label": "Phase 2", "phase": "P2", "value": 8},
+        {"label": "Phase 3", "phase": "P3", "value": 7},
+        {"label": "Registration", "phase": "REG", "value": 2},
     ]
+
+    # Sidebar resource ratios
+    fte_pct: int = 60
+    fsp_pct: int = 40
 
     @rx.var
     def phase_total(self) -> int:
         return sum(int(x.get("value", 0)) for x in self.phase_counts)
-    
-    # Areas of Focus
+
     therapeutic_areas: list[dict] = [
-        {
-            "title":"Internal Medicine",
-            "count": 6,
-            "img":"/ta/internal_medicine.png",
-            "href":"/portfolio?ta=IM",
-        },
-        {
-            "title": "Inflammation & Immunology",
-            "count": 5,
-            "img": "/ta/inflammation_and_immunology.png",
-            "href": "/portfolio?ta=I&I",
-        },
-        {
-            "title": "Vaccines",
-            "count": 6,
-            "img": "/ta/vaccines.png",
-            "href": "/portfolio?ta=Vaccines",
-        },
-        {
-            "title": "Oncology",
-            "count": 7,
-            "img": "/ta/oncology.png",
-            "href": "/portfolio?ta=Oncology",
-        },
+        {"title": "Internal Medicine", "count": 6, "img": "/ta/internal_medicine.png", "href": "/portfolio?ta=IM"},
+        {"title": "Inflammation & Immunology", "count": 5, "img": "/ta/inflammation_and_immunology.png", "href": "/portfolio?ta=I&I"},
+        {"title": "Vaccines", "count": 6, "img": "/ta/vaccines.png", "href": "/portfolio?ta=Vaccines"},
+        {"title": "Oncology", "count": 7, "img": "/ta/oncology.png", "href": "/portfolio?ta=Oncology"},
     ]
 
-    # ===== Portfolio Data ===== #
+    # ---------- Load data (CSV) ----------
+    def on_load(self):
+        """Load datasets from app/data first, then known fallbacks."""
+        candidates = [
+            Path("app/data"),
+            Path("data"),
+            # repo-local fallback you specified
+            Path("/mnt/data/reins_reflex/reins_reflex/app/data"),
+            # original React upload fallback (kept for dev convenience)
+            Path("/mnt/data/reins_js/reins_js/src/data"),
+        ]
+        data_dir = next((p for p in candidates if p.exists()), None)
 
-    # Portfolio Data (use random static data for now)
-    portfolio_active_trials: int = 15
-    portfolio_in_planning: int = 7
-    portfolio_total_resources: int = 18
-    portfolio_fte_share: int = 67
-    portfolio_fsp_share: int = 33
-    portfolio_avg_util: int = 0
+        def safe_csv(name: str) -> pd.DataFrame:
+            if not data_dir:
+                return pd.DataFrame()
+            p = data_dir / name
+            if not p.exists():
+                return pd.DataFrame()
+            try:
+                return pd.read_csv(p)
+            except Exception:
+                return pd.DataFrame()
 
-    # Filters (plain lists so foreach works)
-    filter_status: list[str] = ["All Status", "Ongoing", "Planning", "Paused"]
-    filter_phase: list[str]  = ["All Phases", "Phase I", "Phase II", "Phase III", "Registration"]
-    filter_priority: list[str] = ["All Priority", "High", "Medium", "Low"]
-    filter_area: list[str] = ["All Areas", "Internal Medicine", "Oncology", "Inflammation & Immunology", "Vaccines"]
-    filter_dept: list[str] = ["All Departments", "Clinical Ops", "Biostats", "Data Mgmt", "Supply"]
+        t = safe_csv("Trial.csv")
+        r = safe_csv("Resource.csv")
 
-    selected_status: str = "All Status"
-    selected_phase: str = "All Phases"
-    selected_priority: str = "All Priority"
-    selected_area: str = "All Areas"
-    selected_dept: str = "All Departments"
+        if not t.empty:
+            keep_t = [
+                "id", "title", "protocol_id", "phase", "therapeutic_area", "status",
+                "start_date", "end_date", "fte_allocation", "fsp_allocation",
+                "priority", "sites_count",
+            ]
+            self.trials = t[[c for c in keep_t if c in t.columns]].fillna(0).to_dict("records")
+        else:
+            self.trials = []
 
-    # Trial list (stub; replace with your real data)
-    trials: list[dict] = [
-        {
-            "id": "NPS-IM-001",
-            "title": "Non-Project Specific Activities - Internal Medicine",
-            "status": "Ongoing",
-            "phase": "Phase I",
-            "area": "Internal Medicine",
-        },
-        {
-            "id": "NPS-ONC-001",
-            "title": "Non-Project Specific Activities - Oncology",
-            "status": "Ongoing",
-            "phase": "Phase I",
-            "area": "Oncology",
-        },
-        {
-            "id": "NPS-II-001",
-            "title": "Non-Project Specific Activities - Inflammation & Immunology",
-            "status": "Ongoing",
-            "phase": "Phase I",
-            "area": "Inflammation & Immunology",
-        },
-        {
-            "id": "ONC-001",
-            "title": "Prostate Cancer Immunotherapy",
-            "status": "Ongoing",
-            "phase": "Phase II",
-            "area": "Oncology",
-            "priority": "High",
-        },
-        {
-            "id": "IM-203",
-            "title": "Hypertension Management Study",
-            "status": "Ongoing",
-            "phase": "Registration",
-            "area": "Internal Medicine",
-            "priority": "Medium",
-        },
-        {
-            "id": "II-401",
-            "title": "Rheumatoid Arthritis Biologic Therapy",
-            "status": "Planning",
-            "phase": "Phase II",
-            "area": "Inflammation & Immunology",
-            "priority": "High",
-        },
-    ]
+        if not r.empty:
+            keep_r = ["id", "name", "type", "role", "utilization"]
+            self.resources = r[[c for c in keep_r if c in r.columns]].fillna(0).to_dict("records")
+        else:
+            self.resources = []
 
-    selected_trial_id: Optional[str] = None
+        # No default trial selected 
+        self.selected_trial_id = None
+
+    # ---------- Actions / Event Handlers ----------
+    # explicit setters (and aliases) - avoids set_* vs set_*_ collisions
+    def set_query(self, value: str): self.query = value
+    def set_query_(self, value: str): self.query = value
+
+    def set_status(self, value: str): self.status = value
+    def set_status_(self, value: str): self.status = value
+
+    def set_phase(self, value: str): self.phase = value
+    def set_phase_(self, value: str): self.phase = value
+
+    def set_priority(self, value: str): self.priority = value
+    def set_priority_(self, value: str): self.priority = value
+
+    def set_therapeutic_area(self, value: str): self.therapeutic_area = value
+    def set_therapeutic_area_(self, value: str): self.therapeutic_area = value
+
+    def set_department(self, value: str): self.department = value
+    def set_department_(self, value: str): self.department = value
 
     def select_trial(self, trial_id: str):
         self.selected_trial_id = trial_id
 
-    @rx.var
-    def selected_trial(self) -> dict | None:
-        for t in self.trials:
-            if t["id"] == self.selected_trial_id:
-                return t
-        return None
+    def clear_selection(self):
+        self.selected_trial_id = None
 
+    # ---------- Options (reactive lists) ---------- 
     @rx.var
-    def has_selection(self) -> bool:
-        return self.selected_trial is not None
+    def status_options(self) -> List[str]:
+        vals = {str(t.get("status")) for t in self.trials if "status" in t}
+        return ["All"] + sorted(v for v in vals if v and v != "0")
     
     @rx.var
-    def sel_weekly_hours_label(self) -> str:
-        alloc = self.sel_alloc
-        if not alloc:
-            return "0h"
-        return f"{alloc['weekly_hours']}h"
+    def phase_options(self) -> List[str]:
+        vals = {str(t.get("phase")) for t in self.trials if "phase" in t}
+        return ["All"] + sorted(v for v in vals if v and v != "0")
     
     @rx.var
-    def sel_avg_util_label(self) -> str:
-        alloc = self.sel_alloc
-        if not alloc:
-            return "0%"
-        return f"{alloc['avg_util']}%"
-
-    @rx.var
-    def sel_over_alloc_label(self) -> str:
-        alloc = self.sel_alloc
-        if not alloc:
-            return "0%"
-        return f"{alloc['over_allocated']}%"
+    def priority_options(self) -> List[str]:
+        vals = {str(t.get("priority")) for t in self.trials if "priority" in t}
+        return ["All"] + sorted(v for v in vals if v and v != "0")
     
     @rx.var
-    def sel_sites_counts_label(self) -> str:
-        alloc = self.sel_alloc
-        if not alloc:
-            return "0 sites"
-        return f"{len(alloc['sites'])} sites"
-
-    # ===== Allocations for the allocated trial (mock) =====
-    # keyed by trial_id
-    allocations: dict = {
-        "ONC-001": {
-            "allocated_resources": 2,
-            "weekly_hours": 20,         # total hours/week
-            "avg_util": 26,             # %
-            "over_allocated": 0,        # %
-            "resource_type": {          # donut
-                "FTE": 51,
-                "FSP": 49,
-            },
-            "functional_area": {        # donut
-                "Clinical Ops": 60,
-                "Biostatistics": 25,
-                "Data Mgmt": 15,
-            },
-            "hours_by_dept": {          # bar
-                "Clinical Operations": 15,
-                "Biostatistics (A&R)": 6,
-            },
-            "resources": [              # list
-                {
-                    "name": "Lisa Park",
-                    "role": "Clinical Trial Manager",
-                    "type": "FTE",
-                    "dept": "Clinical Operations",
-                    "util": 35,        # %
-                    "hours_week": 14,
-                    "range": "Jan 14 – Jun 29, 2025",
-                },
-                {
-                    "name": "Chloe Sterling",
-                    "role": "Recruitment Strategy Lead",
-                    "type": "FTE",
-                    "dept": "Optimization, Analytics & Recruitment Solutions (OARS)",
-                    "util": 16,
-                    "hours_week": 6,
-                    "range": "Jan 14 – Jun 29, 2025",
-                },
-            ],
-            "sites": [                  # simple mock site markers
-                {"lat": 51.5074, "lon": -0.1278, "label": "London, UK"},
-                {"lat": 48.8566, "lon": 2.3522, "label": "Paris, FR"},
-                {"lat": 40.7128, "lon": -74.0060, "label": "New York, US"},
-            ],
-        }
-    }
-
+    def area_options(self) -> List[str]:
+        vals = {str(t.get("therapeutic_area")) for t in self.trials if "therapeutic_area" in t}
+        return ["All"] + sorted(v for v in vals if v and v != "0")
+    
     @rx.var
-    def sel_alloc(self) -> dict | None:
-        t = self.selected_trial
-        if t is None:
+    def department_options(self) -> List[str]:
+        # Only populate if the dataset has 'department'; otherwise return just All
+        if self.trials and "department" in self.trials[0]:
+            vals = {str(t.get("department")) for t in self.trials}
+            opts = sorted(v for v in vals if v and v != "0")
+            return ["All"] + opts if opts else ["All"]
+        return ["All"]
+
+    # ---------- Derived: filtered trials ----------
+    @rx.var
+    def filtered_trials(self) -> List[Dict]:
+        data = list(self.trials)
+        q = self.query.lower().strip()
+        if q:
+            data = [t for t in data if q in str(t.get("title","")).lower() or q in str(t.get("protocol_id","")).lower()]
+        if self.phase != "All":
+            data = [t for t in data if t.get("phase") == self.phase]
+        if self.priority != "All":
+            data = [t for t in data if t.get("priority") == self.priority]
+        if self.therapeutic_area != "All":
+            data = [t for t in data if t.get("therapeutic_area") == self.therapeutic_area]
+        if self.status != "All":
+            data = [t for t in data if t.get("status") == self.status]
+        if self.department != "All" and (data and "department" in data[0]):
+            data = [t for t in data if t.get("department") == self.department]
+        return data
+
+    # ---------- Selection helpers ----------
+    @rx.var
+    def selected_trial(self) -> Dict | None:
+        """Current selected trial (falls back to first filtered trial) or None if nothing selected (default)"""
+        if not self.selected_trial_id:
             return None
-        return self.allocations.get(t["id"])
+        return next((t for t in set.filtered_trials if t.get("id") == self.selected_trial_id), None)
+
+    # ---------- KPI atoms (scalars only; no nested dicts) ----------
+    # TODO - Update these to be reactive using data
+    @rx.var
+    def active_trials(self) -> int:
+        return sum(1 for t in self.filtered_trials if str(t.get("status","")).lower() != "completed")
 
     @rx.var
-    def sel_resource_type_fig(self) -> Optional[go.Figure]:
-        alloc = self.sel_alloc
-        if not alloc:
-            return None
-        data = alloc["resource_type"]  # {'FTE': 51, 'FSP': 49}
-        labels, values = list(data.keys()), list(data.values())
-        fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.6, textinfo="none")])
-        fig.update_layout(
-            title="Resource Type Distribution",
-            margin=dict(l=10, r=10, t=40, b=10),
-            legend=dict(orientation="h", y=-0.1),
-            height=300,
+    def planning_trials(self) -> int:
+        return sum(1 for t in self.filtered_trials if str(t.get("status","")).lower() == "planning")
+
+    @rx.var
+    def planning_text(self) -> str:
+        return f"{self.planning_trials} in planning"
+
+    @rx.var
+    def total_resources(self) -> int:
+        return len(self.resources)
+
+    @rx.var
+    def fte_share(self) -> int:
+        fte_cnt = sum(1 for r in self.resources if str(r.get("type")).upper() == "FTE")
+        fsp_cnt = sum(1 for r in self.resources if str(r.get("type")).upper() in {"FSP","CONTRACTOR"})
+        denom = max(1, fte_cnt + fsp_cnt)
+        return round(100 * fte_cnt / denom)
+
+    @rx.var
+    def fsp_share(self) -> int:
+        fte_cnt = sum(1 for r in self.resources if str(r.get("type")).upper() == "FTE")
+        fsp_cnt = sum(1 for r in self.resources if str(r.get("type")).upper() in {"FSP","CONTRACTOR"})
+        denom = max(1, fte_cnt + fsp_cnt)
+        return round(100 * fsp_cnt / denom)
+
+    @rx.var
+    def total_resources_sub(self) -> str:
+        return f"{self.fte_share}% FTE, {self.fsp_share}% FSP"
+
+    @rx.var
+    def avg_util(self) -> int:
+        vals = [float(r.get("utilization") or 0) for r in self.resources]
+        return round(sum(vals) / max(1, len(vals)))
+
+    @rx.var
+    def avg_util_value(self) -> str:
+        return f"{self.avg_util}%"
+
+    @rx.var
+    def avg_util_sub(self) -> str:
+        return (
+            "Underutilized" if self.avg_util < 30
+            else "Balanced workload" if self.avg_util <= 70
+            else "High load"
         )
-        return fig
 
-    @rx.var
-    def sel_functional_area_fig(self) -> Optional[go.Figure]:
-        alloc = self.sel_alloc
-        if not alloc:
-            return None
-        data = alloc["functional_area"]  # e.g., {'Clinical Ops': 60, ...}
-        labels, values = list(data.keys()), list(data.values())
-        fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.6, textinfo="none")])
-        fig.update_layout(
-            title="Functional Area Distribution",
-            margin=dict(l=10, r=10, t=40, b=10),
-            legend=dict(orientation="h", y=-0.1),
-            height=300,
-        )
-        return fig
-
-    @rx.var
-    def sel_hours_by_dept_fig(self) -> Optional[go.Figure]:
-        alloc = self.sel_alloc
-        if not alloc:
-            return None
-        data = alloc["hours_by_dept"]   # {'Clinical Operations': 15, ...}
-        labels, values = list(data.keys()), list(data.values())
-        fig = go.Figure(data=[go.Bar(x=labels, y=values)])
-        fig.update_layout(
-            title="Hours by Department",
-            margin=dict(l=10, r=10, t=40, b=10),
-            height=320,
-        )
-        return fig
-    
-    @rx.var
-    def sel_resources(self) -> List[ResourceItem]:
-        """Typed list for foreach."""
-        alloc = self.sel_alloc
-        if not alloc:
-            return []
-        # mypy/pyright will see this as List[ResourceItem]
-        return list(alloc["resources"])
-
-    @rx.var
-    def sel_sites(self) -> List[SiteItem]:
-        """Optional: typed sites list if you need to iterate later."""
-        alloc = self.sel_alloc
-        if not alloc:
-            return []
-        return list(alloc["sites"])
-    
-    # ===== Footer Card ===== #
-    # Footer user card 
+    # ---------- Footer ----------
     user_initials: str = "RA"
     user_name: str = "Rafael Abbariao"
     user_role: str = "Clinical Operations"
 
     def refresh(self):
-        # TODO: fetch live counts and TA totals; update resource ratio, phase_counts and areas_of_focus
         pass

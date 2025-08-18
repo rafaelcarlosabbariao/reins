@@ -1,34 +1,143 @@
+# app/components/portfolio/trial_list.py
+from __future__ import annotations
 import reflex as rx
 from app.state import AppState as State
-from .trial_card import trial_card
 
-def trial_list() -> rx.Component:
-    # Build rows in Python to avoid Var condition errors
-    # rows = [trial_card(t) for t in State.trials]
+# --- reactive-safe badge helpers ---------------------------------------------
+def _status_badge(status: rx.Var) -> rx.Component:
+    return rx.cond(
+        (status == "Ongoing"),
+        rx.box(
+            rx.text(status, size="2", weight="medium", color="#059669"),
+            padding_x="8px",
+            padding_y="4px",
+            border_radius="9999px",
+            style={"background": "#D1FAE5"},
+        ),
+        rx.cond(
+            (status == "Planning"),
+            rx.box(
+                rx.text(status, size="2", weight="medium", color="#F59E0B"),
+                padding_x="8px",
+                padding_y="4px",
+                border_radius="9999px",
+                style={"background": "#FEF3C7"},
+            ),
+            rx.box(
+                rx.text(status, size="2", weight="medium", color="#334155"),
+                padding_x="8px",
+                padding_y="4px",
+                border_radius="9999px",
+                style={"background": "#E2E8F0"},
+            ),
+        ),
+    )
 
-    # -> State.trials is a Reflex var so can't iterate with Python list comprehension
+def _phase_pill(phase: rx.Var) -> rx.Component:
+    return rx.box(
+        rx.text(phase, size="2", weight="medium", color="#475569"),
+        padding_x="8px",
+        padding_y="4px",
+        border_radius="9999px",
+        style={"background": "#EEF2FF"},
+    )
 
+def _protocol_badge(pid: rx.Var) -> rx.Component:
+    return rx.box(
+        rx.text(pid, size="2", weight="medium", color="#475569"),
+        padding_x="8px",
+        padding_y="4px",
+        border_radius="8px",
+        style={"background": "#F1F5F9"},
+    )
+
+def _bullet() -> rx.Component:
+    return rx.text("•", size="2", color="#CBD5E1")
+
+# --- individual trial card ----------------------------------------------------
+def trial_card(t: dict) -> rx.Component:
+    # selection indicator uses reactive expression with '=='
+    selected_bar = rx.cond(
+        (State.selected_trial_id == t["id"]),
+        rx.box(position="absolute", left="0", top="0", bottom="0", width="3px", bg="#3B82F6"),
+    )
+
+    return rx.box(
+        selected_bar,  # child, not a prop
+        rx.vstack(
+            rx.hstack(
+                rx.vstack(
+                    rx.link(
+                        rx.text(t["title"], weight="bold", color="#0F172A"),
+                        href="#",
+                        # important: call the action directly (no lambda)
+                        on_click=State.select_trial(t["id"]),
+                    ),
+                    spacing="1",
+                    align="start",
+                ),
+                rx.spacer(),
+                rx.hstack(
+                    rx.icon(tag="eye", size=16, color="#94A3B8"),
+                    rx.icon(tag="edit", size=16, color="#94A3B8"),
+                    spacing="3",
+                    align="center",
+                ),
+                width="100%",
+            ),
+            rx.hstack(
+                _status_badge(t["status"]),
+                _bullet(),
+                _protocol_badge(t["protocol_id"]),
+                _phase_pill(t["phase"]),
+                spacing="3",
+                align="center",
+                wrap="wrap",
+            ),
+            spacing="2",
+            align="start",
+        ),
+        position="relative",
+        padding="16px",
+        border_radius="16px",
+        box_shadow="0 6px 18px rgba(15,23,42,0.06)",
+        bg="white",
+    )
+
+# --- scrollable list panel ----------------------------------------------------
+def trials_panel() -> rx.Component:
     return rx.card(
         rx.vstack(
             rx.hstack(
-                rx.text("Clinical Trials", size="3", weight="bold"),
-                align="center", width="100%",
-            ),
-            rx.input(placeholder="Search trials...", width="100%"),
-            # rx.vstack(*rows, spacing="3", width="100%"),
-            rx.vstack(
-                rx.foreach(State.trials, lambda it: trial_card(it)),
-                spacing="3",
+                rx.hstack(
+                    rx.icon(tag="flask-conical", size=18, color="#334155"),
+                    rx.text("Clinical Trials", weight="bold", color="#000000"),
+                    spacing="2",
+                    align="center",
+                ),
+                rx.spacer(),
+                align="center",
                 width="100%",
             ),
+            rx.scroll_area(
+                rx.vstack(
+                    rx.foreach(State.filtered_trials, lambda t: trial_card(t)),
+                    spacing="4",
+                    width="100%",
+                    align="stretch",
+                ),
+                type="auto",
+                scrollbars="vertical",
+                height="70vh",
+            ),
             spacing="3",
-            width="100%",
             align="start",
+            width="100%",
         ),
-        padding="0.75rem",
-        radius="xl",
-        shadow="sm",
-        width="100%",
-        height="36rem",
-        overflow_y="auto",
+        padding="16px",
+        bg="#F8FAFC",
+        border_radius="16px",
+        box_shadow="0 10px 24px rgba(15, 23, 42, 0.08)",
     )
+
+__all__ = ["trials_panel", "trial_card"]

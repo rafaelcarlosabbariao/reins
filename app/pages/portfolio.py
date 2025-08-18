@@ -1,71 +1,166 @@
+# app/pages/portfolio.py
+from __future__ import annotations
 import reflex as rx
 from app.state import AppState as State
-from app.components.portfolio.metric_card import metric_card
+from app.components.portfolio.kpi_card import kpi_card
+from app.components.portfolio.trial_list import trials_panel
 from app.components.portfolio.filter_bar import filter_bar
-from app.components.portfolio.trial_list import trial_list
-from app.components.portfolio.resource_analytics_strip import analytics_strip
-from app.components.portfolio.charts import resource_type_donut, functional_area_donut, hours_by_dept_bar
-from app.components.portfolio.resource_list import resource_list
-from app.components.portfolio.sites_map import sites_map
 
-def empty_selection() -> rx.Component:
+def portfolio_header() -> rx.Component:
+    return rx.hstack(
+        rx.vstack(
+            rx.heading("Portfolio Overview", size="8"),
+            rx.text(
+                "Clinical trial portfolio and resource allocation management",
+                color="#64748B",
+            ),
+            align="start",
+            spacing="2",
+        ),
+        rx.spacer(),
+        rx.button(
+            rx.icon(tag="plus", size=16),
+            rx.text("Add New Trial", weight="medium"),
+            padding_x="14px",
+            padding_y="10px",
+            border_radius="12px",
+            bg="#2563EB",
+            color="white",
+            _hover={"background": "#1D4ED8"},
+        ),
+        align="center",
+        width="100%",
+    )
+
+# Search + Trials list
+def trials_search_box() -> rx.Component:
+    return rx.box(
+        rx.hstack(
+            rx.icon(tag="search", size=16, color="#64748B"),
+            rx.input(
+                value=State.query,
+                placeholder="Search trials...", 
+                on_change=State.set_query_,
+                width="100%",
+            ),
+            width="100%",
+        ),
+        padding_x="12px",
+        padding_y="10px",
+        border_radius="10px",
+        box_shadow="inset 0 0 0 1px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.06)",
+        bg="white",
+        width="100%",
+    )
+
+def trials_filter() -> rx.Component:
+    return rx.vstack(
+        trials_search_box(),
+        trials_panel(),
+        spacing="3",
+        align="start",
+        width="100%",
+    )
+
+def kpi_strip() -> rx.Component:
+    return rx.grid(
+        # KPI cards
+        kpi_card(
+            "Active Trials",
+            State.active_trials,            # scalar @rx.var
+            icon_text="🧪",
+            accent="indigo-sky",
+            trend_text=State.planning_text, # scalar @rx.var (string)
+            trend_positive=True,
+        ),
+        kpi_card(
+            "Total Resources",
+            State.total_resources,          # scalar @rx.var
+            subtitle=State.total_resources_sub,
+            icon_text="👥",
+            accent="emerald",
+        ),
+        kpi_card(
+            "Avg Utilization",
+            State.avg_util_value,           # scalar @rx.var (string)
+            subtitle=State.avg_util_sub,
+            icon_text="📈",
+            accent="violet",
+        ),
+        # columns must be a token or breakpoints mapping (NOT a list of ints)
+        columns=rx.breakpoints({"base": "1", "md": "2", "lg": "3"}),
+        spacing="4",
+        width="100%",
+    )
+
+def trial_placeholder() -> rx.Component:
+    """Empty state card prompting selection (shown when nothing selected)."""
+    icon = rx.icon(tag="flask-conical", size=56, color="#94A3B8", aria_hidden="true")
     return rx.card(
         rx.vstack(
-            rx.heading("Select a Clinical Trial", size="6"),
-            rx.text("Choose a trial from the list to view sites, resource analytics and allocation information.", size="2", color="gray"),
-            spacing="2", align="center", width="100%",
+            rx.center(icon),
+            rx.center(rx.text("Select a Clinical Trial", weight="bold", size="5", color="#334155")),
+            rx.center(
+                rx.text(
+                    "Choose a trial from the list to view sites, resource analytics and allocation information.",
+                    color="#64748B",
+                    align="center",
+                )
+            ),
+            spacing="3",
+            width="100%",
         ),
-        padding="2rem", radius="xl", shadow="sm", width="100%", height="16rem",
-        display="grid", place_items="center",
+        padding="28px",
+        border_radius="16px",
+        box_shadow="0 10px 24px rgba(15,23,42,0.08)",
+        width="100%",
     )
 
-def selected_view() -> rx.Component:
-    #    ┌─ strip
-    #    ├─ small grid: two donuts
-    #    ├─ bar chart
-    #    ├─ resource list
-    #    └─ sites map
+def main_content() -> rx.Component:
     return rx.vstack(
-        analytics_strip(),
-        rx.grid(
-            rx.card(resource_type_donut(), padding="0.5rem", radius="xl", shadow="sm", width="100%"),
-            rx.card(functional_area_donut(), padding="0.5rem", radius="xl", shadow="sm", width="100%"),
-            columns="2", gap="4", width="100%",
+        kpi_strip(),
+        # show placeholder when nothing selected
+        rx.cond(
+            (State.selected_trial_id == None),
+            trial_placeholder(),
+            rx.box(),
         ),
-        rx.card(hours_by_dept_bar(), padding="0.5rem", radius="xl", shadow="sm", width="100%"),
-        resource_list(),
-        sites_map(),
-        spacing="4", width="100%", align="start",
+        spacing="4",
+        align="start",
+        width="100%",
     )
 
-def right_panel() -> rx.Component:
-    return rx.cond(State.has_selection, selected_view(), empty_selection())
-
-def view() -> rx.Component:
-    header = rx.vstack(
-        rx.hstack(
-            rx.heading("Portfolio Overview", size="8"),
-            rx.spacer(),
-            rx.button("+  Add New Trial", class_name="reins-btn reins-btn--primary"),
-            align="center", width="100%",
+def two_col_row() -> rx.Component: 
+    return rx.flex(
+        # Search + Filter list
+        rx.box(
+            trials_filter(),
+            width=rx.breakpoints({"base":"100%", "lg":"34%"}),
         ),
-        rx.text("Clinical trial portfolio and resource allocation management", size="2", color="gray"),
-        spacing="2", width="100%", align="start",
+        # KPI Cards + Placeholder/Main Content
+        rx.box(
+            main_content(),
+            width=rx.breakpoints({"base":"100%", "lg":"66%"}),
+        ),
+        align="start",
+        spacing="2",
+        width="100%",
     )
 
-    kpis = rx.grid(
-        metric_card("Active Trials", State.portfolio_active_trials, f"{State.portfolio_in_planning} in planning", "/icons/microscope.svg"),
-        metric_card("Total Resources", State.portfolio_total_resources, f"{State.portfolio_fte_share}% FTE, {State.portfolio_fsp_share}% FSP", "/icons/resources.svg"),
-        metric_card("Avg Utilization", f"{State.portfolio_avg_util}%", "Balanced workload", "/icons/balance.svg"),
-        columns="3", spacing="4", width="100%",
+def page() -> rx.Component:
+    return rx.container(
+        rx.vstack(
+            portfolio_header(),
+            filter_bar(),
+            two_col_row(),
+            spacing="5",
+            align="start",
+        ),
+        on_mount=State.on_load,
+        size="4",
+        width="100%",
+        max_width="1600px",
+        margin_x="auto",
     )
 
-    filters = rx.card(filter_bar(), padding="0.75rem", radius="xl", shadow="sm", width="100%")
-
-    content = rx.grid(
-        rx.box(trial_list(), width="30%"),
-        rx.box(right_panel(), width="70%"),
-        columns="2", gap="4", width="100%", align="start",
-    )
-
-    return rx.vstack(header, kpis, filters, content, spacing="4", width="100%", align="start")
+__all__ = ["page"]

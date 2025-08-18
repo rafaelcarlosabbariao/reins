@@ -6,7 +6,8 @@ def view() -> rx.Component:
     return rx.vstack(
         rx.heading("Analytics", size="8"),
         rx.grid(
-            rx.foreach(State.kpi_pairs, lambda pair: kpi_card(pair[0], pair[1])),
+            rx.box(),
+            # rx.foreach(State.kpi_pairs, lambda pair: kpi_card(pair[0], pair[1])),
             columns="4",
             gap="1rem",
             width="100%",

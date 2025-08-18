@@ -44,8 +44,8 @@ def index() -> rx.Component:
 
 @rx.page(route="/portfolio", title="Portfolio")
 def portfolio() -> rx.Component:
-    from app.pages.portfolio import view
-    return layout("/portfolio", view())
+    from app.pages.portfolio import page
+    return layout("/portfolio", page())
 
 @rx.page(route="/resources", title="Resources")
 def resources() -> rx.Component:
