@@ -682,6 +682,25 @@ class AppState(rx.State):
     def selected_resources_count(self) -> int:
         return len(self.selected_resources_detail)
 
+    # ======================================== #
+    # ---------- Resource States ------------- #
+    # ======================================== #
+
+    # UI States
+    resources_search: str = ""
+    resources_tab: str = "resources"   # resources | open_positions | capacity_planning | incoming
+
+    # Tab counts (wire to real data later; resources tab already uses total_resources)
+    open_positions_count: int = 9
+    incoming_count: int = 0
+
+    def set_resources_search(self, value: str): self.resources_search = value
+    def set_resources_search_(self, value: str): self.resources_search = value
+
+    def set_resources_tab(self, value: str): self.resources_tab = value
+    def set_resources_tab_(self, value: str): self.resources_tab = value
+    
+    
     # ---------- Footer ----------
     user_initials: str = "RA"
     user_name: str = "Rafael Abbariao"
