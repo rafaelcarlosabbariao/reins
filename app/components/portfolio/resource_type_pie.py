@@ -7,7 +7,7 @@ def _legend_dot(color: str) -> rx.Component:
     return rx.box(width="10px", height="10px", border_radius="50%", bg=color)
 
 
-def resource_type_donut() -> rx.Component:
+def resource_type_pie() -> rx.Component:
     """Donut card: FTE vs FSP/Contractor for the selected trial."""
     donut = rx.box(
         # outer ring painted by a conic-gradient
@@ -27,7 +27,7 @@ def resource_type_donut() -> rx.Component:
             width="220px",
             height="220px",
             border_radius="50%",
-            style={"background": State.selected_type_donut_bg},
+            style={"background": State.selected_type_pie_bg},
         ),
         display="flex",
         align_items="center",
@@ -37,8 +37,8 @@ def resource_type_donut() -> rx.Component:
     )
 
     legend = rx.hstack(
-        rx.hstack(_legend_dot("#3B82F6"), rx.text(rx.text.strong("FTE:"), " ", rx.text(State.selected_fte_pct, " %")), spacing="2", align="center"),
-        rx.hstack(_legend_dot("#10B981"), rx.text(rx.text.strong("FSP:"), " ", rx.text(State.selected_fsp_pct, " %")), spacing="2", align="center"),
+        rx.hstack(_legend_dot("#3B82F6"), rx.text(rx.text.strong("FTE:", color="#0F172A"), " ", rx.text(State.selected_fte_pct, " %", color="#0F172A")), spacing="2", align="center"),
+        rx.hstack(_legend_dot("#10B981"), rx.text(rx.text.strong("FSP:", color="#0F172A"), " ", rx.text(State.selected_fsp_pct, " %", color="#0F172A")), spacing="2", align="center"),
         spacing="6",
         justify="center",
         width="100%",

@@ -58,6 +58,6 @@ def view() -> rx.Component:
 
         spacing="4",
         width="100%",
-        align="start",
-        background="white"
+        max_width="1600px",
+        margin_x="auto",
     )

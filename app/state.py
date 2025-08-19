@@ -88,7 +88,7 @@ class AppState(rx.State):
 
         # Resources
         if not r.empty:
-            allowed_r = ["id", "name", "type", "role", "utilization", "capacity"]
+            allowed_r = ["id", "name", "type", "role", "utilization", "capacity", "department"]
             cols = [c for c in allowed_r if c in r.columns]
             df_r = r[cols].copy()
             # numeric coercion only when present
@@ -389,7 +389,7 @@ class AppState(rx.State):
     def selected_underutilized(self) -> int:
         return sum(1 for u in self._per_resource_util_list if u < 30.0)
 
-    # ---------- Resource Type split
+    # ---------- Resource Type split for selected trial ------------
     @rx.var
     def selected_type_counts(self) -> dict:
         if not self.selected_resource_ids:
@@ -422,7 +422,7 @@ class AppState(rx.State):
         return 100 - self.selected_fte_pct if denom else 0
 
     @rx.var
-    def selected_type_donut_bg(self) -> str:
+    def selected_type_pie_bg(self) -> str:
         """CSS conic-gradient for the donut (with a 1% white gap)."""
         if self.selected_allocated_resources_count == 0:
             return "conic-gradient(#E5E7EB 0 100%)"
@@ -520,6 +520,82 @@ class AppState(rx.State):
             start = end
         return f"conic-gradient({', '.join(segments)})"
     
+    # ---------- Department (hours) for selected trial ----------
+    @rx.var
+    def selected_department_breakdown(self) -> list[dict]:
+        """
+        Returns: [{"label": department, "hours": float}, ...] for the *selected* trial.
+        Hours source, in order of preference:
+          - Allocation.weekly_hours
+          - Allocation.allocation_percentage × Resource.capacity   (only if both exist)
+        Uses only columns that actually exist.
+        """
+        pid = self.selected_trial_id
+        if not pid or not self.selected_resource_ids:
+            return []
+
+        selected_rids = {str(rid) for rid in self.selected_resource_ids}
+
+        # lookups from Resource.csv
+        cap_lookup = {str(r.get("name")): float(r.get("capacity") or 0.0)
+                      for r in self.resources if "id" in r and "capacity" in r}
+        dept_lookup = {str(r.get("name")): (str(r.get("department")) or "Unknown")
+                       for r in self.resources if "id" in r and "department" in r}
+
+        # see what allocation fields we have
+        has_hours = any("weekly_hours" in a for a in self.allocations)
+        has_pct   = any("allocation_percentage" in a for a in self.allocations)
+
+        # hours per selected resource, for the selected protocol
+        hours_by_res: dict[str, float] = {}
+        for a in self.allocations:
+            if str(a.get("trial_id", "")) != str(pid):
+                continue
+            rid = str(a.get("resource_id", "")).strip()
+            if rid not in selected_rids:
+                continue
+
+            val = 0.0
+            if has_hours and "weekly_hours" in a:
+                val = float(a.get("weekly_hours") or 0.0)
+            elif has_pct and "allocation_percentage" in a and rid in cap_lookup:
+                pct = float(a.get("allocation_percentage") or 0.0)
+                val = (pct / 100.0) * cap_lookup.get(rid, 0.0)
+
+            if val:
+                hours_by_res[rid] = hours_by_res.get(rid, 0.0) + val
+
+        if not hours_by_res:
+            return []
+
+        # roll up by department
+        by_dept: dict[str, float] = {}
+        for rid, hrs in hours_by_res.items():
+            dept = dept_lookup.get(rid, "Unknown")
+            by_dept[dept] = by_dept.get(dept, 0.0) + hrs
+
+        items = [{"label": k, "hours": v} for k, v in by_dept.items()]
+        items.sort(key=lambda x: x["hours"], reverse=True)
+        return items
+
+    # data for recharts 
+    @rx.var
+    def selected_department_chart_data(self) -> list[dict]:
+        return [
+            {"department": d["label"], 
+             "hours": round(float(d["hours"]), 2)} for d in self.selected_department_breakdown
+        ]
+
+    @rx.var
+    def selected_department_count(self) -> int:
+        """How many departments have non-zero hours for the selected trial."""
+        return len(self.selected_department_breakdown)
+    
+    @rx.var
+    def has_selected_department_data(self) -> bool:
+        return self.selected_department_count > 0
+
+
     # ---------- Footer ----------
     user_initials: str = "RA"
     user_name: str = "Rafael Abbariao"
