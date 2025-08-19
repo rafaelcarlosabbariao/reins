@@ -8,7 +8,7 @@ def view() -> rx.Component:
     return rx.vstack(
         # ABOUT / HERO
         hero(),
-        rx.box(height="1rem"),
+        rx.box(height="1.25rem"),
 
         # Pipeline header + snapshot date
         rx.hstack(
@@ -44,7 +44,7 @@ def view() -> rx.Component:
         rx.heading(
             "Revolutionary medicines enable us to enrich and extend life for people living with all types of diseases.",
             size="7",
-            width="60%",
+            width="48rem",
         ),
         rx.grid(
             rx.foreach(
@@ -58,6 +58,7 @@ def view() -> rx.Component:
 
         spacing="4",
         width="100%",
-        max_width="1600px",
+        max_width="1200px",
         margin_x="auto",
+        padding_x="0.5rem",
     )

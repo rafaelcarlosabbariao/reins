@@ -15,15 +15,10 @@ def hero() -> rx.Component:
         ),
         rx.hstack(
             rx.button("Learn More About Our Portfolio", on_click=rx.redirect("/portfolio")),
-            # rx.button(
-            #     "Explore the Product Pipeline",
-            #     variant="soft",
-            #     on_click=rx.redirect("/portfolio?view=pipeline"),
-            # ),
             spacing="3",
             wrap="wrap",
         ),
         spacing="3",
-        width="60%",
+        max_width="48rem", 
         align="start",
     )
