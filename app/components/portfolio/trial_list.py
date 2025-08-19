@@ -145,7 +145,7 @@ def trials_panel() -> rx.Component:
                 ),
                 type="auto",
                 scrollbars="vertical",
-                height="70vh",
+                height="65vh",
             ),
             spacing="3",
             align="start",

@@ -594,7 +594,93 @@ class AppState(rx.State):
     @rx.var
     def has_selected_department_data(self) -> bool:
         return self.selected_department_count > 0
+    
+    # ---------- Trial Resource Toggle (Charts/Resource) ----------
+    show_resources_table: bool = False
+    
+    def show_charts(self):
+        self.show_resources_table = False
 
+    def show_resources(self):
+        self.show_resources_table = True
+
+    @rx.var
+    def selected_resources_detail(self) -> list[dict]:
+        pid = self.selected_trial_id
+        if not pid or not self.selected_resource_ids:
+            return []
+                
+        selected_rids = {str(rid) for rid in self.selected_resource_ids}    
+
+        # resource lookups (use only columns that exist)
+        R = {str(r.get("name")): r for r in self.resources if "name" in r}
+        caps  = {rid: float(r.get("capacity") or 0.0) for rid, r in R.items() if "capacity" in r}
+        names = {rid: str(r.get("name") or "") for rid, r in R.items() if "name" in r}
+        roles = {rid: str(r.get("role") or "") for rid, r in R.items() if "role" in r}
+        types = {rid: str(r.get("type") or "") for rid, r in R.items() if "type" in r}
+        depts = {rid: str(r.get("department") or "") for rid, r in R.items() if "department" in r}  
+
+        has_hours = any("weekly_hours" in a for a in self.allocations)
+        has_pct   = any("allocation_percentage" in a for a in self.allocations) 
+
+        agg: dict[str, dict] = {}
+        for a in self.allocations:
+            if str(a.get("trial_id", "")) != str(pid):
+                continue
+            rid = str(a.get("resource_id", "")).strip()
+            if rid not in selected_rids:
+                continue    
+
+            row = agg.setdefault(rid, {
+                "name": rid,
+                "name": names.get(rid, ""),
+                "role": roles.get(rid, ""),
+                "type": types.get(rid, ""),
+                "department": depts.get(rid, ""),
+                "capacity": caps.get(rid, 0.0),
+                "weekly_hours": 0.0,
+                "allocation_pct": 0.0,
+                "start_date": None,
+                "end_date": None,
+            })  
+
+            if has_hours and "weekly_hours" in a:
+                row["weekly_hours"] += float(a.get("weekly_hours") or 0.0)
+            if has_pct and "allocation_percentage" in a:
+                row["allocation_pct"] += float(a.get("allocation_percentage") or 0.0)   
+
+            s = str(a.get("start_date") or "").strip() or None
+            e = str(a.get("end_date") or "").strip() or None
+            # take min start / max end where present
+            if s:
+                row["start_date"] = min(filter(None, [row["start_date"], s])) if row["start_date"] else s
+            if e:
+                row["end_date"] = max(filter(None, [row["end_date"], e])) if row["end_date"] else e 
+
+        rows: list[dict] = []
+        for rid, row in agg.items():
+            hours = row["weekly_hours"]
+            if hours == 0.0 and row["allocation_pct"] and row["capacity"]:
+                hours = (row["allocation_pct"] / 100.0) * float(row["capacity"])    
+
+            pct = row["allocation_pct"]
+            if (pct == 0.0) and hours and row["capacity"]:
+                pct = (hours / float(row["capacity"])) * 100.0  
+
+            rows.append({
+                **row,
+                "weekly_hours": round(hours or 0.0, 1),
+                "allocation_pct": int(round(pct or 0.0)),
+                "date_range": f"{row['start_date']} - {row['end_date']}" if (row["start_date"] or row["end_date"]) else "",
+            })  
+
+        # sort highest allocation first
+        rows.sort(key=lambda x: x["allocation_pct"], reverse=True)
+        return rows 
+
+    @rx.var
+    def selected_resources_count(self) -> int:
+        return len(self.selected_resources_detail)
 
     # ---------- Footer ----------
     user_initials: str = "RA"

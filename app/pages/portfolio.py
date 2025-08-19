@@ -9,6 +9,9 @@ from app.components.portfolio.resource_summary import resource_summary_strip
 from app.components.portfolio.resource_type_pie import resource_type_pie
 from app.components.portfolio.functional_area_pie import functional_area_pie
 from app.components.portfolio.resources_by_department import resources_by_department_chart
+from app.components.portfolio.resource_allocations_table import resource_allocations_table
+
+content_height = "100vh - 220px"
 
 def portfolio_header() -> rx.Component:
     return rx.hstack(
@@ -64,6 +67,7 @@ def trials_filter() -> rx.Component:
         spacing="3",
         align="start",
         width="100%",
+        height="100%",
     )
 
 def kpi_strip() -> rx.Component:
@@ -129,20 +133,29 @@ def main_content() -> rx.Component:
             trial_placeholder(),
             rx.vstack(
                 resource_summary_strip(),
-                rx.grid(
-                    resource_type_pie(),
-                    functional_area_pie(),
-                    columns=rx.breakpoints({"base":"1", "md":"2"}),
-                    spacing="4",
-                    width="100%",
+                rx.cond(
+                    State.show_resources_table,
+                    resource_allocations_table(),
+                    rx.vstack(
+                        rx.grid(
+                            resource_type_pie(),
+                            functional_area_pie(),
+                            columns=rx.breakpoints({"base":"1", "md":"2"}),
+                            spacing="4",
+                            width="100%"
+                        ),
+                        resources_by_department_chart(),
+                        spacing="4",
+                        width="100%",
+                    )
                 ),
-                resources_by_department_chart(),
                 spacing="4",
                 width="100%",
             ),
         ),
         spacing="4",
         align="start",
+        height="100%",
         width="100%",
     )
 

@@ -2,53 +2,44 @@ from __future__ import annotations
 import reflex as rx
 from app.state import AppState as State
 
-
-def _legend_dot(color: str) -> rx.Component:
-    return rx.box(width="10px", height="10px", border_radius="50%", bg=color)
-
-
 def resource_type_pie() -> rx.Component:
-    """Donut card: FTE vs FSP/Contractor for the selected trial."""
-    donut = rx.box(
-        # outer ring painted by a conic-gradient
-        rx.box(
-            # inner hole
-            rx.box(
-                position="absolute",
-                top="50%",
-                left="50%",
-                transform="translate(-50%, -50%)",
-                width="56%",
-                height="56%",
-                border_radius="50%",
-                bg="white",
-            ),
-            position="relative",
-            width="220px",
-            height="220px",
-            border_radius="50%",
-            style={"background": State.selected_type_pie_bg},
+    # Recharts data: two slices from your State
+    data = [
+        {"name": "FTE", "value": State.selected_type_counts["fte"]},
+        {"name": "FSP / Contractor", "value": State.selected_type_counts["fsp"]},
+    ]
+
+    chart = rx.recharts.pie_chart(
+        rx.recharts.tooltip(),
+        rx.recharts.legend(),
+        rx.recharts.pie(
+            # Colors for each slice (order matches `data` above)
+            rx.recharts.cell(fill="#3B82F6"),   # FTE (blue)
+            rx.recharts.cell(fill="#10B981"),   # FSP/Contractor (green)
+
+            data=data,
+            data_key="value",
+            name_key="name",
+            inner_radius=70,     # donut look
+            outer_radius=110,
+            padding_angle=2,
+            label=True,          # show % labels on slices
         ),
-        display="flex",
-        align_items="center",
-        justify_content="center",
         width="100%",
-        padding_y="10px",
+        height=300,
     )
 
-    legend = rx.hstack(
-        rx.hstack(_legend_dot("#3B82F6"), rx.text(rx.text.strong("FTE:", color="#0F172A"), " ", rx.text(State.selected_fte_pct, " %", color="#0F172A")), spacing="2", align="center"),
-        rx.hstack(_legend_dot("#10B981"), rx.text(rx.text.strong("FSP:", color="#0F172A"), " ", rx.text(State.selected_fsp_pct, " %", color="#0F172A")), spacing="2", align="center"),
-        spacing="6",
-        justify="center",
-        width="100%",
+    content = rx.cond(
+        (State.selected_allocated_resources_count > 0),
+        chart,
+        rx.center(rx.text("No data for this trial.", color="#64748B"), height="260px"),
     )
 
     return rx.card(
         rx.vstack(
             rx.text("Resource Type Distribution", weight="bold", color="black"),
             rx.box(height="1px", width="100%", bg="#E5E7EB"),
-            donut,            legend,
+            content,
             spacing="3",
             align="start",
             width="100%",

@@ -33,6 +33,35 @@ def _value_with_suffix(value_var: rx.Var | str, suffix: str, color: str) -> rx.C
         align="center",
     )
 
+def _view_toggle() -> rx.Component:
+    """Small two-icon segmented toggle (Charts | Resources) in the top-right."""
+    charts_btn = rx.button(
+        rx.icon(tag="bar-chart-2", size=16),
+        variant=rx.cond(State.show_resources_table, "soft", "solid"),
+        on_click=State.show_charts,
+        padding="6px",
+        border_radius="10px",
+        min_width="32px",
+        height="32px",
+    )
+    resources_btn = rx.button(
+        rx.icon(tag="list", size=16),
+        variant=rx.cond(State.show_resources_table, "solid", "soft"),
+        on_click=State.show_resources,
+        padding="6px",
+        border_radius="10px",
+        min_width="32px",
+        height="32px",
+    )
+    return rx.hstack(
+        charts_btn,
+        resources_btn,
+        spacing="1",
+        padding="2px",
+        bg="#F1F5F9",
+        border_radius="12px",
+        align="center",
+    )
 
 def resource_summary_strip() -> rx.Component:
     """Summary header + four KPIs for the selected trial (reactive-safe)."""
@@ -61,6 +90,7 @@ def resource_summary_strip() -> rx.Component:
                     align="center",
                 ),
                 rx.spacer(),
+                _view_toggle(),
                 align="center",
                 width="100%",
             ),
