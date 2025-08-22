@@ -3,35 +3,36 @@ import reflex as rx
 from app.state import AppState as State
 
 def _chip_select(
-        value: rx.Var,
-        items: rx.Var | list[str],
-        on_change,
-        placeholder: str,
+    value: rx.Var,
+    items: rx.Var | list[str],
+    on_change,
+    placeholder: str,
 ) -> rx.Component:
-    """
-    a chip-styled select (rounded, subtle shadow)
-    """
     return rx.box(
-        rx.select(
-            items=items,
+        rx.select.root(
+            # Visible filter pill
+            rx.select.trigger(
+                class_name=".chip-select",
+                radius="full",
+                size="2",
+                style={
+                    "color": "#0F172A",
+                    "background": "#FFFFFF",
+                    "border": "1px solid #E2E8F0",
+                    "boxShadow": "0 1px 2px rgba(15,23,42,0.05)",
+                    "padding": "6px 10px",
+                    "width": "100%",
+                },
+            ),
+            # Dropdown items
+            rx.select.content(
+                rx.foreach(items, lambda it: rx.select.item(it, style={"color":"#0F172A"})),
+                bg="white",
+            ),
             value=value,
             on_change=on_change,
             placeholder=placeholder,
-            # keep using the simple select; style the visible control here
-            size="2",
-            radius="full",
-            width="100%",
-            # these props land on the trigger in the simple API
-            color="#0F172A",           # text color
-            bg="#FFFFFF",              # background
-            border="1px solid #E2E8F0",
-            box_shadow="0 1px 2px rgba(15,23,42,0.05)",
-            padding="6px 10px",
-            # make placeholder and states consistent
-            _placeholder={"color": "#0F172A"},
-            _hover={"bg": "#FFFFFF"},
-            _active={"bg": "#FFFFFF"},
-            _focus={"bg": "#FFFFFF", "outline": "none", "boxShadow": "0 0 0 1px #93C5FD"},
+            style={"color": "#0F172A"},
         ),
         width="100%",
     )

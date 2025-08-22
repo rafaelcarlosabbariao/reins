@@ -49,6 +49,11 @@ def trials_search_box() -> rx.Component:
                 placeholder="Search trials...", 
                 on_change=State.set_query_,
                 width="100%",
+                style={
+                    "background":"#FFFFFF",
+                    "border":"1px solid #E2E8F0",
+                    "boxShadow":"none",
+                }
             ),
             width="100%",
         ),
