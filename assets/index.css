@@ -156,6 +156,19 @@ button:hover {
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
+/* Resources page Tabs → force black text */
+.reins-tabs .rt-TabsTrigger,
+.reins-tabs .rt-TabsTrigger[data-state="active"],
+.reins-tabs button[role="tab"] {
+  color: #0F172A !important;
+}
+
+/* Optional: slightly darker on hover for feedback */
+.reins-tabs .rt-TabsTrigger:hover,
+.reins-tabs button[role="tab"]:hover {
+  color: #0B1220 !important;
+}
+
 /* Utility helpers you may want to use in Reflex components via class_name */
 .bg-white { background: #fff; }
 .text-black { color: #000; }
@@ -232,4 +245,21 @@ button:hover {
 .chip-select .rt-SelectContent span {
   color: #0F172A;
   background: #FFFFFF;
+}
+
+.resources-table, .resources-table * {
+  color: #0F172A;
+}
+
+.resources-table-grid {
+  display: grid;
+  grid-template-columns: 2.2fr 1.6fr 0.9fr 2.8fr 0.7fr;
+  align-items: center;
+}
+
+.resources-table-grid > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

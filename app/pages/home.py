@@ -4,7 +4,7 @@ from app.components.home.pipeline_counts_card import pipeline_counts_card, pipel
 from app.components.home.focus_area_card import focus_area_card
 from app.components.home.hero import hero
 
-def view() -> rx.Component:
+def page() -> rx.Component:
     return rx.vstack(
         # ABOUT / HERO
         hero(),

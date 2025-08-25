@@ -36,7 +36,7 @@ def _search_row() -> rx.Component:
             rx.input(
                 value=State.resources_search,
                 placeholder="Search resources and positions... ",
-                on_change=State.set_resources_search_,
+                on_change=State.set_resources_search,
                 size="3",
                 width="100%",
                 class_name="reins-search",
@@ -68,11 +68,12 @@ def _tabs_row() -> rx.Component:
                         align="center",
                     ),
                     value="resources",
-                    on_click=lambda: State.set_resources_tab_("resources"),
+                    on_click=lambda: State.set_resources_tab("resources"),
                 ),
             ],
             wrap="wrap",
             gap="6px",
+            class_name="reins-tabs",
         ),
         # Keep tabs uncontrolled; avoid on_value_change (not supported in your build)
         default_value="resources",

@@ -1,13 +1,14 @@
 import reflex as rx
 from app.components.resources.header import header
+from app.components.resources.table import table
 
-def view() -> rx.Component:
+@rx.page(route="/resources", title="Resources")
+def page() -> rx.Component:
     return rx.vstack(
         header(),
-        rx.text("Named resource list, skill matrix, and heatmap will render here."),
-        rx.card(rx.text("Heatmap placeholder"), height="22rem"),
+        table(),
         spacing="4",
         width="100%",
-        max_width="1600px",
+        padding="24px",
         margin_x="auto",
     )

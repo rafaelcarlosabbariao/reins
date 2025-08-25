@@ -6,6 +6,20 @@ from pathlib import Path
 from typing import Optional, List, Dict
 import pandas as pd
 
+def _type_style(t: str) -> tuple[str, str, str]:
+    """Return (label, color, bg) for a given type string."""
+    label = (t or "").strip()
+    key = label.upper()
+    color_map = {"FTE": "#2563EB", 
+                 "FSP": "#10B981", 
+                 "CONTRACTOR": "#A78BFA"}
+    bg_map    = {
+        "FTE": "rgba(37,99,235,0.12)",
+        "FSP": "rgba(16,185,129,0.12)",
+        "CONTRACTOR": "rgba(167,139,250,0.16)",
+    }
+    return label, color_map.get(key, "#64748B"), bg_map.get(key, "rgba(100,116,139,0.12)")
+
 class AppState(rx.State):
     # ---------- Filters ----------
     query: str = ""
@@ -721,22 +735,51 @@ class AppState(rx.State):
     incoming_count: int = 0
 
     def set_resources_search(self, value: str): self.resources_search = value
-    def set_resources_search_(self, value: str): self.resources_search = value
 
     def set_resources_tab(self, value: str): self.resources_tab = value
-    def set_resources_tab_(self, value: str): self.resources_tab = value
-    
-    
-    def debug_filters(self):
-        """Debug method to check filter states"""
-        print(f"Current filters:")
-        print(f"  Status: {self.status}")
-        print(f"  Phase: {self.phase}")
-        print(f"  Priority: {self.priority}")
-        print(f"  Therapeutic Area: {self.therapeutic_area}")
-        print(f"  Department: {self.department}")
-        print(f"  Query: {self.query}")
-        print(f"  Filtered count: {len(self.filtered_trials)}")
+
+    @rx.var
+    def normalized_resources(self) -> list[dict]:
+        """Shape CSV rows (already in self.resources) into UI fields + badge styles."""
+        base = self.resources or []
+        out: list[dict] = []
+        for r in base:
+            name = (r.get("Name") or r.get("name") or "").strip()
+            role = (r.get("Role") or r.get("role") or "").strip()
+            dept = (r.get("Department") or r.get("department") or "").strip()
+            tlab, tcolor, tbg = _type_style(r.get("Type") or r.get("type") or "")
+            out.append({
+                "name": name,
+                "role": role,
+                "type": tlab,          # label to display
+                "type_color": tcolor,  # precomputed color
+                "type_bg": tbg,        # precomputed background
+                "department": dept,
+            })
+        return out
+
+    @rx.var
+    def filtered_resources(self) -> list[dict]:
+        """Apply the search box to name/role/type/department (case-insensitive)."""
+        q = (self.resources_search or "").strip().lower()
+        base = self.normalized_resources
+        
+        if not q:
+            return base
+
+        def hits(row: dict) -> bool:
+            return (
+                q in row["name"].lower()
+                or q in row["role"].lower()
+                or q in row["type"].lower()
+                or q in row["department"].lower()
+            )
+
+        return [r for r in base if hits(r)]
+
+    @rx.var
+    def total_resources(self) -> int:
+        return len(self.filtered_resources)
 
     # ---------- Footer ----------
     user_initials: str = "RA"

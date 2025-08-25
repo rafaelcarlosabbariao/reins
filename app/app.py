@@ -39,8 +39,8 @@ def layout(current: str, *children) -> rx.Component:
 
 @rx.page(route="/", title="Home")
 def index() -> rx.Component:
-    from app.pages.home import view
-    return layout("/", view())
+    from app.pages.home import page
+    return layout("/", page())
 
 @rx.page(route="/portfolio", title="Portfolio")
 def portfolio() -> rx.Component:
@@ -49,8 +49,8 @@ def portfolio() -> rx.Component:
 
 @rx.page(route="/resources", title="Resources")
 def resources() -> rx.Component:
-    from app.pages.resources import view
-    return layout("/resources", view())
+    from app.pages.resources import page
+    return layout("/resources", page())
 
 @rx.page(route="/timeline", title="Timeline")
 def timeline() -> rx.Component:
