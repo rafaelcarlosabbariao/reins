@@ -4,10 +4,7 @@ from app.state import AppState as State
 def _title_block() -> rx.Component:
     return rx.vstack(
         rx.heading("Resource Management", size="8"),
-        rx.text(
-            "Manage resources, capacity planning, and trial allocations",
-            color="#64748B",
-        ),
+        rx.text("Manage resources, capacity planning, and trial allocations"),
         spacing="2",
         align="start",
     )
@@ -35,21 +32,26 @@ def _primary_actions() -> rx.Component:
 def _search_row() -> rx.Component:
     return rx.box(
         rx.hstack(
-            rx.icon(tag="search", size=18, color="gray.10"),
+            rx.icon(tag="search", size=18, color="#0F172A"),
             rx.input(
-                placeholder="Search resources and positions...",
                 value=State.resources_search,
+                placeholder="Search resources and positions... ",
                 on_change=State.set_resources_search_,
                 size="3",
                 width="100%",
+                class_name="reins-search",
+                style={
+                    "background":"#FFFFFF",
+                    "border":"1px solid #E2E8F0",
+                    "boxShadow":"none",
+                    "color":"#0F172A",
+                }
             ),
             spacing="2",
             align="center",
         ),
         padding="10px",
-        border="1px solid #E5E7EB",
         border_radius="10px",
-        bg="white",
         width="100%",
     )
 
@@ -90,4 +92,5 @@ def header() -> rx.Component:
         _tabs_row(),
         spacing="4",
         width="100%",
+        class_name="reins-page-black",
     )

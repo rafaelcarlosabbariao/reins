@@ -26,13 +26,15 @@ def _chip_select(
             ),
             # Dropdown items
             rx.select.content(
-                rx.foreach(items, lambda it: rx.select.item(it, style={"color":"#0F172A"})),
+                rx.foreach(items, lambda it: rx.select.item(it, 
+                                                            value=it,
+                                                            style={"color":"#0F172A"})),
                 bg="white",
             ),
             value=value,
-            on_change=on_change,
+            on_change= lambda v: on_change(v),
             placeholder=placeholder,
-            style={"color": "#0F172A"},
+            # default_value="All",
         ),
         width="100%",
     )
@@ -49,11 +51,32 @@ def filter_bar() -> rx.Component:
     )
 
     chips_grid = rx.grid(
-        _chip_select(State.status, State.status_options, State.set_status, "All Status"),
-        _chip_select(State.phase, State.phase_options, State.set_phase, "All Phases"),
-        _chip_select(State.priority, State.priority_options, State.set_priority, "All Priority"),
-        _chip_select(State.therapeutic_area, State.area_options, State.set_therapeutic_area, "All Areas"),
-        _chip_select(State.department, State.department_options, State.set_department, "All Departments"),
+        _chip_select(State.status, 
+                     State.status_options, 
+                     State.set_status,
+                    #  lambda v: State.set_status(v), 
+                     "All Status"),
+
+        _chip_select(State.phase, 
+                     State.phase_options, 
+                     lambda v: State.set_phase(v),
+                     "All Phases"),
+
+        _chip_select(State.priority, 
+                     State.priority_options, 
+                     lambda v: State.set_priority(v),
+                     "All Priority"),
+
+        _chip_select(State.therapeutic_area,
+                     State.area_options, 
+                     lambda v: State.set_therapeutic_area(v),
+                     "All Areas"),
+
+        _chip_select(State.department, 
+                     State.department_options, 
+                     lambda v: State.set_department(v), 
+                     "All Departments"),
+
         columns=rx.breakpoints({"base": "1", "sm": "2", "md": "3", "lg": "5"}),
         spacing="3",
         width="100%",

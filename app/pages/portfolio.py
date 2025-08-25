@@ -43,16 +43,17 @@ def portfolio_header() -> rx.Component:
 def trials_search_box() -> rx.Component:
     return rx.box(
         rx.hstack(
-            rx.icon(tag="search", size=16, color="#64748B"),
+            rx.icon(tag="search", size=16, color="#0F172A"),
             rx.input(
                 value=State.query,
                 placeholder="Search trials...", 
-                on_change=State.set_query_,
+                on_change=State.set_query,
                 width="100%",
                 style={
                     "background":"#FFFFFF",
                     "border":"1px solid #E2E8F0",
                     "boxShadow":"none",
+                    "color":"#0F172A",
                 }
             ),
             width="100%",

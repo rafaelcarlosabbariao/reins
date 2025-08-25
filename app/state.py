@@ -21,7 +21,7 @@ class AppState(rx.State):
     allocations: List[Dict] = []
 
     # ---------- Selection for Trials panel ----------
-    selected_trial_id: str | None = None
+    selected_trial_id: Optional[str] = None
 
     # ---------- Home Page ----------
     pipeline_snapshot_asof: str = date.today().strftime("%B %d, %Y")
@@ -127,23 +127,23 @@ class AppState(rx.State):
 
     # ---------- Actions / Event Handlers ----------
     # explicit setters (and aliases) - avoids set_* vs set_*_ collisions
-    def set_query(self, value: str): self.query = value
-    def set_query_(self, value: str): self.query = value
+    def set_status(self, value: Optional[str]):
+        self.status = value
 
-    def set_status(self, value: str): self.status = value
-    def set_status_(self, value: str): self.status = value
+    def set_phase(self, value: Optional[str]):
+        self.phase = value
 
-    def set_phase(self, value: str): self.phase = value
-    def set_phase_(self, value: str): self.phase = value
+    def set_priority(self, value: Optional[str]):
+        self.priority = value
 
-    def set_priority(self, value: str): self.priority = value
-    def set_priority_(self, value: str): self.priority = value
+    def set_therapeutic_area(self, value: Optional[str]):
+        self.therapeutic_area = value
 
-    def set_therapeutic_area(self, value: str): self.therapeutic_area = value
-    def set_therapeutic_area_(self, value: str): self.therapeutic_area = value
+    def set_department(self, value: Optional[str]):
+        self.department = value
 
-    def set_department(self, value: str): self.department = value
-    def set_department_(self, value: str): self.department = value
+    def set_query(self, value: Optional[str]):
+        self.query = value
 
     def select_trial(self, trial_id: str):
         self.selected_trial_id = str(trial_id)
@@ -154,26 +154,36 @@ class AppState(rx.State):
     # ---------- Options (reactive lists) ---------- 
     @rx.var
     def status_options(self) -> List[str]:
-        vals = {str(t.get("status")) for t in self.trials if "status" in t}
+        if not self.trials:
+            return ["All"]
+        vals = {str(t.get("status")) for t in self.trials if t.get("status")}
         return ["All"] + sorted(v for v in vals if v and v != "0")
     
     @rx.var
     def phase_options(self) -> List[str]:
-        vals = {str(t.get("phase")) for t in self.trials if "phase" in t}
+        if not self.trials:
+            return ["All"]
+        vals = {str(t.get("phase")) for t in self.trials if t.get("phase")}
         return ["All"] + sorted(v for v in vals if v and v != "0")
     
     @rx.var
     def priority_options(self) -> List[str]:
-        vals = {str(t.get("priority")) for t in self.trials if "priority" in t}
+        if not self.trials:
+            return ["All"]
+        vals = {str(t.get("priority")) for t in self.trials if t.get("priority")}
         return ["All"] + sorted(v for v in vals if v and v != "0")
     
     @rx.var
     def area_options(self) -> List[str]:
-        vals = {str(t.get("therapeutic_area")) for t in self.trials if "therapeutic_area" in t}
+        if not self.trials:
+            return ["All"]
+        vals = {str(t.get("therapeutic_area")) for t in self.trials if t.get("therapeutic_area")}
         return ["All"] + sorted(v for v in vals if v and v != "0")
     
     @rx.var
     def department_options(self) -> List[str]:
+        if not self.trials:
+            return ["All"]
         # Only populate if the dataset has 'department'; otherwise return just All
         if self.trials and "department" in self.trials[0]:
             vals = {str(t.get("department")) for t in self.trials}
@@ -184,20 +194,36 @@ class AppState(rx.State):
     # ---------- Derived: filtered trials ----------
     @rx.var
     def filtered_trials(self) -> List[Dict]:
+        """Filter trials based on current filter settings"""
         data = list(self.trials)
+        
+        # Search filter
         q = self.query.lower().strip()
         if q:
-            data = [t for t in data if q in str(t.get("title","")).lower() or q in str(t.get("protocol_id","")).lower()]
-        if self.phase != "All":
-            data = [t for t in data if t.get("phase") == self.phase]
-        if self.priority != "All":
-            data = [t for t in data if t.get("priority") == self.priority]
-        if self.therapeutic_area != "All":
-            data = [t for t in data if t.get("therapeutic_area") == self.therapeutic_area]
+            data = [t for t in data if 
+                    q in str(t.get("title", "")).lower() or 
+                    q in str(t.get("protocol_id", "")).lower()]
+        
+        # Status filter
         if self.status != "All":
-            data = [t for t in data if t.get("status") == self.status]
-        if self.department != "All" and (data and "department" in data[0]):
-            data = [t for t in data if t.get("department") == self.department]
+            data = [t for t in data if str(t.get("status", "")) == self.status]
+        
+        # Phase filter
+        if self.phase != "All":
+            data = [t for t in data if str(t.get("phase", "")) == self.phase]
+        
+        # Priority filter
+        if self.priority != "All":
+            data = [t for t in data if str(t.get("priority", "")) == self.priority]
+        
+        # Therapeutic area filter
+        if self.therapeutic_area != "All":
+            data = [t for t in data if str(t.get("therapeutic_area", "")) == self.therapeutic_area]
+        
+        # Department filter (if applicable)
+        if self.department != "All" and data and "department" in data[0]:
+            data = [t for t in data if str(t.get("department", "")) == self.department]
+        
         return data
 
     # ---------- Selection helpers ----------
@@ -701,6 +727,17 @@ class AppState(rx.State):
     def set_resources_tab_(self, value: str): self.resources_tab = value
     
     
+    def debug_filters(self):
+        """Debug method to check filter states"""
+        print(f"Current filters:")
+        print(f"  Status: {self.status}")
+        print(f"  Phase: {self.phase}")
+        print(f"  Priority: {self.priority}")
+        print(f"  Therapeutic Area: {self.therapeutic_area}")
+        print(f"  Department: {self.department}")
+        print(f"  Query: {self.query}")
+        print(f"  Filtered count: {len(self.filtered_trials)}")
+
     # ---------- Footer ----------
     user_initials: str = "RA"
     user_name: str = "Rafael Abbariao"
