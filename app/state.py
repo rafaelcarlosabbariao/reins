@@ -781,6 +781,52 @@ class AppState(rx.State):
     def total_resources(self) -> int:
         return len(self.filtered_resources)
 
+    # ---------- Actions / Allocations panel state -----------
+    allocations_open: bool = False
+    selected_resource_name: str = ""
+    resource_allocations: dict[str, list[dict]] = {}
+
+    def open_allocations(self, name: str):
+        self.allocations_open = True
+        self.selected_resource_name = name or ""
+    
+    def close_allocations(self):
+        self.allocations_open = False
+        self.selected_resource_name = ""
+    
+    def noop(self):  # placeholder for the other two buttons
+        pass
+    
+    @rx.var
+    def selected_resource(self) -> dict:
+        """Safe dict with the fields we display in the header of the panel."""
+        for r in self.normalized_resources:
+            if r["name"] == self.selected_resource_name:
+                return r
+        # fallback keys to avoid indexing errors in the UI
+        return {"name": self.selected_resource_name, "role": "", "department": "", "type": ""}
+    
+    @rx.var
+    def selected_resource_allocations(self) -> list[dict]:
+        """Returns rows for the allocations table; ensures all required keys exist."""
+        raw = self.resource_allocations.get(self.selected_resource_name, []) or []
+        rows: list[dict] = []
+        for a in raw:
+            rows.append({
+                "trial":        (a.get("trial") or ""),
+                "phase":        (a.get("phase") or ""),
+                "allocation":   (a.get("allocation") or ""),     # e.g., "25%"
+                "weekly_hours": (a.get("weekly_hours") or ""),   # e.g., "10h"
+                "start_date":   (a.get("start_date") or ""),
+                "end_date":     (a.get("end_date") or ""),
+            })
+        return rows
+    
+    @rx.var
+    def has_selected_allocations(self) -> bool:
+        return len(self.selected_resource_allocations) > 0
+
+
     # ---------- Footer ----------
     user_initials: str = "RA"
     user_name: str = "Rafael Abbariao"

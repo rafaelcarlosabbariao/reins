@@ -247,19 +247,40 @@ button:hover {
   background: #FFFFFF;
 }
 
-.resources-table, .resources-table * {
-  color: #0F172A;
-}
-
+/* 5-column grid; let the last column size to its content */
 .resources-table-grid {
   display: grid;
-  grid-template-columns: 2.2fr 1.6fr 0.9fr 2.8fr 0.7fr;
+  grid-template-columns: 2.2fr 1.6fr 0.9fr 2.8fr auto;  /* last col = auto */
   align-items: center;
 }
+
+/* keep text tidy, but don't clip the actions cell */
+.resources-table, .resources-table * { color: #0F172A; }
 
 .resources-table-grid > * {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.alloc-table-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1.4fr 0.6fr; /* Trial, Phase, Allocation, Weekly, Duration, Actions */
+  align-items: center;
+}
+.alloc-table-grid > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* actions cell: visible overflow + fixed spacing */
+.actions-cell {
+  overflow: visible !important;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;          /* consistent spacing for 3 icons */
+  min-width: 96px;    /* guarantees all three fit */
 }

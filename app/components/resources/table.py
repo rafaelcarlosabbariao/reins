@@ -16,15 +16,32 @@ def _type_badge(label, color, bg) -> rx.Component:
         text_align="center",
     )
 
-def _actions() -> rx.Component:
+def _icon_button(tag: str, on_click, color: str) -> rx.Component:
+    return rx.button(
+        rx.icon(tag=tag, size=16, color=color),
+        variant="soft",
+        size="1",
+        radius="full",
+        on_click=on_click,
+        style={
+            "background":"transparent",
+            "boxShadow":"none",
+            "padding":"0",
+            "minWidth":"auto",
+            "height":"auto",
+        }
+    )
+
+def _actions(r) -> rx.Component:
     return rx.hstack(
-        rx.icon(tag="trending-up", size=16),
-        rx.icon(tag="users", size=16),
-        rx.icon(tag="edit-3", size=16),
+        _icon_button("activity",   lambda: State.open_allocations(r["name"]), "#10B981"), 
+        _icon_button("user-plus",   State.noop, "#2563EB"),
+        _icon_button("edit-3",  State.noop, "#94A3B8"),
         spacing="3",
         justify="end",
         width="100%",
         color="#0F172A",
+        class_name="actions-cell"
     )
 
 def _header_row() -> rx.Component:
@@ -59,7 +76,7 @@ def _row(r) -> rx.Component:
             rx.text(r["role"]),
             _type_badge(r["type"], r["type_color"], r["type_bg"]),
             rx.text(r["department"]),
-            _actions(),
+            _actions(r),
             columns="5",
             gap="16px",
             width="100%",
