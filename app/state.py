@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import Optional, List, Dict
 import pandas as pd
+import re
 
 def _type_style(t: str) -> tuple[str, str, str]:
     """Return (label, color, bg) for a given type string."""
@@ -19,6 +20,22 @@ def _type_style(t: str) -> tuple[str, str, str]:
         "CONTRACTOR": "rgba(167,139,250,0.16)",
     }
     return label, color_map.get(key, "#64748B"), bg_map.get(key, "rgba(100,116,139,0.12)")
+
+def _norm_name(s: str) -> str:
+    s = (s or "").strip().lower()
+    s = re.sub(r"^(dr|mr|mrs|ms|miss|prof)\.?\s+", "", s)   # drop titles
+    s = re.sub(r"[^a-z\s]", "", s)                         # rm punct
+    s = re.sub(r"\s+", " ", s)
+    return s
+
+def _first(d: dict, keys: list[str]) -> str:
+    for k in keys:
+        # case-insensitive column match
+        for dk in d.keys():
+            if dk.lower() == k.lower():
+                v = d.get(dk)
+                return "" if v is None else str(v).strip()
+    return ""
 
 class AppState(rx.State):
     # ---------- Filters ----------

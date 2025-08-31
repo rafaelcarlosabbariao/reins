@@ -105,7 +105,7 @@ def _alloc_table() -> rx.Component:
             State.has_selected_allocations,
             rx.foreach(State.selected_resource_allocations, _alloc_row),
             rx.box(
-                rx.text("No allocations found.", color="#64748B"),
+                rx.text("No allocations found."),
                 padding="16px",
                 bg="#FFFFFF",
             ),
@@ -146,6 +146,7 @@ def allocations_panel() -> rx.Component:
                     spacing="4",
                     width="100%",
                 ),
+                class_name="allocations-panel",
                 position="fixed",
                 inset="4% 6%",
                 bg="#F8FAFC",
