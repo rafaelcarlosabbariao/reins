@@ -34,9 +34,9 @@ def _icon_button(tag: str, on_click, color: str) -> rx.Component:
 
 def _actions(r) -> rx.Component:
     return rx.hstack(
-        _icon_button("activity",   lambda: State.open_allocations(r["name"]), "#10B981"), 
-        _icon_button("user-plus",   State.noop, "#2563EB"),
-        _icon_button("edit-3",  State.noop, "#94A3B8"),
+        _icon_button("activity", lambda: State.open_allocations(r["name"]), "#10B981"), 
+        _icon_button("user-plus", State.noop, "#2563EB"),
+        _icon_button("edit-3", State.noop, "#94A3B8"),
         spacing="3",
         justify="end",
         width="100%",

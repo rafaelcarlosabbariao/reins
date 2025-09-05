@@ -755,25 +755,26 @@ class AppState(rx.State):
 
     def set_resources_tab(self, value: str): self.resources_tab = value
 
-    @rx.var
-    def normalized_resources(self) -> list[dict]:
-        """Shape CSV rows (already in self.resources) into UI fields + badge styles."""
-        base = self.resources or []
-        out: list[dict] = []
-        for r in base:
-            name = (r.get("Name") or r.get("name") or "").strip()
-            role = (r.get("Role") or r.get("role") or "").strip()
-            dept = (r.get("Department") or r.get("department") or "").strip()
-            tlab, tcolor, tbg = _type_style(r.get("Type") or r.get("type") or "")
-            out.append({
-                "name": name,
-                "role": role,
-                "type": tlab,          # label to display
-                "type_color": tcolor,  # precomputed color
-                "type_bg": tbg,        # precomputed background
-                "department": dept,
-            })
-        return out
+    def _norm_name(s: str) -> str:
+        s = (s or "").strip().lower()
+        s = re.sub(r"^(dr|mr|mrs|ms|miss|prof)\.?\s+", "", s)   # drop titles
+        s = re.sub(r"[^a-z\s]", "", s)                         # rm punct
+        s = re.sub(r"\s+", " ", s)
+        return s
+
+    def _norm_col(s: str) -> str:
+        # "Resource ID" == "resource_id" == "resource-id" == "resourceid"
+        return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+    def _first(d: dict, keys: list[str]) -> str:
+        """Return the first non-null field in d whose (normalized) name matches any of keys."""
+        if not isinstance(d, dict):
+            return ""
+        want = {_norm_col(k) for k in keys}
+        for dk, v in d.items():
+            if _norm_col(dk) in want:
+                return "" if v is None else str(v).strip()
+        return ""
 
     @rx.var
     def filtered_resources(self) -> list[dict]:
@@ -799,9 +800,25 @@ class AppState(rx.State):
         return len(self.filtered_resources)
 
     # ---------- Actions / Allocations panel state -----------
+    allocations_data: list[dict] = []
     allocations_open: bool = False
     selected_resource_name: str = ""
     resource_allocations: dict[str, list[dict]] = {}
+
+    def load_allocations_from_csv(self, path: str = "data/Allocation.csv"):
+        """One-time load of allocations into state"""
+        if self.allocations_data: # already loaded
+            return
+        import csv, pathlib
+        p = pathlib.Path(path)
+        if not p.exists():
+            return
+        with p.open("r", encoding="utf-8-sig", newline="") as f:
+            self.allocations_data = list(csv.DictReader(f))
+
+    # Convenience zero-arg wrapper for on_load (since on_load passes no args)
+    def load_allocations(self):
+        self.load_allocations_from_csv()
 
     def open_allocations(self, name: str):
         self.allocations_open = True
@@ -815,34 +832,82 @@ class AppState(rx.State):
         pass
     
     @rx.var
+    def normalized_resources(self) -> list[dict]:
+        base = self.resources or []
+        out: list[dict] = []
+        for r in base:
+            name = (r.get("Name") or r.get("name") or "").strip()
+            role = (r.get("Role") or r.get("role") or "").strip()
+            dept = (r.get("Department") or r.get("department") or "").strip()
+            tlab, tcolor, tbg = _type_style(r.get("Type") or r.get("type") or "")
+
+            # Prefer an ID if your resources dataset has it; else use normalized name (TO ADD LATER)
+            rid = _first(r, ["NTID", "Network ID", "Employee ID", "resource_ntid", "resource_guid"])
+            join_key = (rid or _norm_name(name)).lower()
+
+            out.append({
+                "name": name,
+                "role": role,
+                "type": tlab,
+                "type_color": tcolor,
+                "type_bg": tbg,
+                "department": dept,
+                "join_key": join_key,
+            })
+        return out
+
+    @rx.var
+    def _allocations_grouped(self) -> dict[str, list[dict]]:
+        """Group allocations by join_key (prefer ID, else normalized name)"""
+        groups: dict[str, list[dict]] = {}
+        rows = self.allocations_data or [] # populate from csv
+        for a in rows:
+            # Build the same join key as resources: prefer ID, else normalized person name
+            rid    = _first(a, ["NTID", "Network ID", "Employee ID", "resource_ntid", "resource_guid"])
+            person = _first(a, ["resource_id", "Resource", "Name", "Employee", "Assignee", "resource_name"])
+            key    = (rid or _norm_name(person)).lower()
+    
+            # Normalize the fields we display (map snake_case columns too)
+            trial  = _first(a, ["Trial", "Study", "Study Name", "Study Title", "trial_id"]) or "Unknown Trial"
+            phase  = _first(a, ["Phase"])  # blank if your CSV doesn’t have it
+            alloc  = _first(a, ["Allocation", "Percent", "FTE%", "Pct", "allocation_percentage"])
+
+            if alloc and not str(alloc).endswith("%"):
+                alloc = f"{alloc}%"
+                wh = _first(a, ["Weekly Hours", "Hours", "WeeklyHours", "weekly_hours"])
+
+            if wh and not str(wh).endswith("h"):
+                wh = f"{wh}h"
+                start = _first(a, ["Start Date", "Start", "From", "Begin", "start_date"])
+                end = _first(a, ["End Date", "End", "To", "Finish", "end_date"])
+    
+            row = {"trial": trial, "phase": phase, "allocation": alloc,
+                   "weekly_hours": wh, "start_date": start, "end_date": end}
+            
+            groups.setdefault(key, []).append(row)
+        return groups
+
+    @rx.var
     def selected_resource(self) -> dict:
-        """Safe dict with the fields we display in the header of the panel."""
+        """Safe dict with the fields we display in the header of the panel"""
         for r in self.normalized_resources:
             if r["name"] == self.selected_resource_name:
                 return r
-        # fallback keys to avoid indexing errors in the UI
-        return {"name": self.selected_resource_name, "role": "", "department": "", "type": ""}
-    
+        # fallback with a synthetic join_key
+        return {"name": self.selected_resource_name, 
+                "role": "", 
+                "department": "",
+                "type": "",
+                "join_key": _norm_name(self.selected_resource_name)}
+
     @rx.var
     def selected_resource_allocations(self) -> list[dict]:
-        """Returns rows for the allocations table; ensures all required keys exist."""
-        raw = self.resource_allocations.get(self.selected_resource_name, []) or []
-        rows: list[dict] = []
-        for a in raw:
-            rows.append({
-                "trial":        (a.get("trial") or ""),
-                "phase":        (a.get("phase") or ""),
-                "allocation":   (a.get("allocation") or ""),     # e.g., "25%"
-                "weekly_hours": (a.get("weekly_hours") or ""),   # e.g., "10h"
-                "start_date":   (a.get("start_date") or ""),
-                "end_date":     (a.get("end_date") or ""),
-            })
-        return rows
-    
+        key = self.selected_resource.get("join_key") or _norm_name(self.selected_resource_name)
+        return self._allocations_grouped.get(key, [])
+
     @rx.var
     def has_selected_allocations(self) -> bool:
         return len(self.selected_resource_allocations) > 0
-
 
     # ---------- Footer ----------
     user_initials: str = "RA"
