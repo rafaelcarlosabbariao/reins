@@ -1,0 +1,9 @@
+site_id,resource_id,allocation_percentage,weekly_hours,start_date,end_date,role_at_site,notes,id,created_date,updated_date,created_by_id,created_by,is_sample
+"ONC-001-001","R001","40","16","2024-03-15","2025-09-30","Clinical Research Coordinator","","68954dcb6cb19cf59943472a","2025-08-08T01:07:23.460000","2025-08-08T01:07:23.460000","6893ff71bab8e9bef31184be","rafael.abbariao@gmail.com",""
+"ONC-001-001","R002","25","10","2024-03-15","2025-09-30","Data Manager","","68954dcb6cb19cf59943472b","2025-08-08T01:07:23.460000","2025-08-08T01:07:23.460000","6893ff71bab8e9bef31184be","rafael.abbariao@gmail.com",""
+"ONC-001-002","R003","35","14","2024-03-15","2025-09-30","Clinical Monitor","","68954dcb6cb19cf59943472c","2025-08-08T01:07:23.460000","2025-08-08T01:07:23.460000","6893ff71bab8e9bef31184be","rafael.abbariao@gmail.com",""
+"IM-002-001","R001","30","12","2024-01-10","2025-12-15","Site Manager","","68954dcb6cb19cf59943472d","2025-08-08T01:07:23.460000","2025-08-08T01:07:23.460000","6893ff71bab8e9bef31184be","rafael.abbariao@gmail.com",""
+"VAC-004-001","R004","50","20","2024-02-20","2024-10-15","Principal Investigator Support","","68954dcb6cb19cf59943472e","2025-08-08T01:07:23.460000","2025-08-08T01:07:23.460000","6893ff71bab8e9bef31184be","rafael.abbariao@gmail.com",""
+"site_1","resource_1","40","16","2024-01-15","2024-12-15","Site Monitor","","6895577c49f49a5e18422a94","2025-08-08T01:48:44.355000","2025-08-08T01:48:44.355000","6893ff71bab8e9bef31184be","rafael.abbariao@gmail.com",""
+"site_1","resource_2","25","10","2024-02-01","2024-11-30","Clinical Research Coordinator","","6895577c49f49a5e18422a95","2025-08-08T01:48:44.355000","2025-08-08T01:48:44.355000","6893ff71bab8e9bef31184be","rafael.abbariao@gmail.com",""
+"site_2","resource_3","30","12","2024-01-20","2024-10-20","Data Manager","","6895577c49f49a5e18422a96","2025-08-08T01:48:44.355000","2025-08-08T01:48:44.355000","6893ff71bab8e9bef31184be","rafael.abbariao@gmail.com",""
