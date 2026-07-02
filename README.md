@@ -9,9 +9,6 @@ FTE / FSP mix. It does this for one study or across the whole portfolio, then
 derives the numbers a resourcing lead actually asks about: **who is over- or
 under-allocated, how each study is staffed, and where the pipeline is short.**
 
-<!-- Replace with your deployed link once live -->
-🔗 **Live showcase:** _`<deploy-url>`_ · 📄 **Write-up:** _`<write-up-url>`_
-
 ![REINS portfolio dashboard](docs/assets/dashboard.png)
 
 ---
