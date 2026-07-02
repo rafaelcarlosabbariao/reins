@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" font-family="-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#5b7b9a"/>
+    </marker>
+    <style>
+      .ent{fill:#eaf1f8;stroke:#34568B;stroke-width:1.5}
+      .assoc{fill:#e8f6ef;stroke:#10B981;stroke-width:1.8}
+      .lab{font-size:13px;fill:#1f2d3d;font-weight:700;text-anchor:middle}
+      .sub{font-size:10.5px;fill:#5b6b7d;text-anchor:middle}
+      .title{font-size:15px;fill:#1f2d3d;font-weight:700}
+      .cap{font-size:12px;fill:#5b6b7d}
+      .edge{stroke:#5b7b9a;stroke-width:1.6;fill:none}
+      .card{font-size:11px;fill:#5b7b9a;font-weight:600;text-anchor:middle}
+    </style>
+  </defs>
+
+  <text x="30" y="34" class="title">Clinical-resourcing data model</text>
+  <text x="30" y="54" class="cap">Allocation is the associative entity: a many-to-many bridge carrying how much (percent / hours) and how long (dates).</text>
+
+  <!-- Trial -->
+  <rect x="40" y="95" width="180" height="66" rx="10" class="ent"/>
+  <text x="130" y="122" class="lab">Trial</text>
+  <text x="130" y="141" class="sub">protocol · phase · TA · status</text>
+
+  <!-- Allocation (center associative) -->
+  <rect x="390" y="90" width="180" height="76" rx="10" class="assoc"/>
+  <text x="480" y="118" class="lab">Allocation</text>
+  <text x="480" y="136" class="sub">allocation_% · weekly_hours</text>
+  <text x="480" y="152" class="sub">start_date · end_date</text>
+
+  <!-- Resource -->
+  <rect x="740" y="95" width="180" height="66" rx="10" class="ent"/>
+  <text x="830" y="122" class="lab">Resource</text>
+  <text x="830" y="141" class="sub">type · role · dept · capacity</text>
+
+  <!-- Trial >-< Allocation -->
+  <path d="M220,128 L386,128" class="edge" marker-end="url(#arrow)"/>
+  <text x="303" y="118" class="card">1 ──&lt; N</text>
+  <text x="303" y="150" class="sub">on protocol_id</text>
+
+  <!-- Resource >-< Allocation -->
+  <path d="M740,128 L574,128" class="edge" marker-end="url(#arrow)"/>
+  <text x="657" y="118" class="card">N &gt;── 1</text>
+  <text x="657" y="150" class="sub">on resource name / NTID</text>
+
+  <!-- Site -->
+  <rect x="40" y="250" width="180" height="66" rx="10" class="ent"/>
+  <text x="130" y="277" class="lab">Site</text>
+  <text x="130" y="296" class="sub">trial · country · PI · enrollment</text>
+
+  <!-- Site Allocation -->
+  <rect x="390" y="250" width="180" height="66" rx="10" class="assoc"/>
+  <text x="480" y="277" class="lab">Site Allocation</text>
+  <text x="480" y="296" class="sub">role_at_site · % · hours</text>
+
+  <!-- Open Position -->
+  <rect x="740" y="250" width="180" height="66" rx="10" class="ent"/>
+  <text x="830" y="273" class="lab">Open Position</text>
+  <text x="830" y="291" class="sub">functional_group · level</text>
+  <text x="830" y="307" class="sub">status · target_fill_date</text>
+
+  <!-- Trial -> Site -->
+  <path d="M130,161 L130,248" class="edge" marker-end="url(#arrow)"/>
+  <text x="130" y="205" class="card">1 ──&lt; N</text>
+
+  <!-- Site >-< Site Allocation -->
+  <path d="M220,283 L386,283" class="edge" marker-end="url(#arrow)"/>
+  <text x="303" y="273" class="card">1 ──&lt; N</text>
+
+  <!-- Resource -> Site Allocation -->
+  <path d="M740,166 C650,210 570,230 570,246" class="edge" marker-end="url(#arrow)"/>
+
+  <!-- Open Position -> Resource (fills into) -->
+  <path d="M830,248 L830,163" class="edge" marker-end="url(#arrow)"/>
+  <text x="875" y="205" class="sub">fills into</text>
+
+  <!-- Derived-metrics strip -->
+  <rect x="40" y="380" width="880" height="130" rx="12" fill="#f7f9fb" stroke="#c9d6e2" stroke-width="1.2"/>
+  <text x="60" y="408" class="title">Derived-metrics layer (app/state.py)</text>
+  <text x="60" y="430" class="cap">Every number is a reactive computation over the model above — no stored aggregates. One definition of utilization, applied everywhere.</text>
+
+  <g>
+    <rect x="60" y="450" width="180" height="42" rx="6" fill="#eaf1f8" stroke="#34568B"/>
+    <text x="150" y="468" class="lab">Allocation rollups</text>
+    <text x="150" y="484" class="sub">hours by role / dept / type</text>
+    <path d="M240,471 L276,471" class="edge" marker-end="url(#arrow)"/>
+    <rect x="278" y="450" width="180" height="42" rx="6" fill="#eaf1f8" stroke="#34568B"/>
+    <text x="368" y="468" class="lab">Utilization</text>
+    <text x="368" y="484" class="sub">hours ÷ capacity → over/under</text>
+    <path d="M458,471 L494,471" class="edge" marker-end="url(#arrow)"/>
+    <rect x="496" y="450" width="180" height="42" rx="6" fill="#eaf1f8" stroke="#34568B"/>
+    <text x="586" y="468" class="lab">KPIs + FTE/FSP mix</text>
+    <text x="586" y="484" class="sub">banded, filter-aware</text>
+    <path d="M676,471 L712,471" class="edge" marker-end="url(#arrow)"/>
+    <rect x="714" y="450" width="186" height="42" rx="6" fill="#e8f6ef" stroke="#10B981"/>
+    <text x="807" y="468" class="lab">Dashboards</text>
+    <text x="807" y="484" class="sub">portfolio · per-trial · roster</text>
+  </g>
+</svg>

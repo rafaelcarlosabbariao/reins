@@ -10,7 +10,7 @@ def logo() -> rx.Component:
         ),
         rx.vstack(
             rx.text("REINS", weight="bold", color="black"),
-            rx.text("Resourcing Insights & Standards", size="1", color="gray"),
+            rx.text("Resourcing Insights & Strategy", size="1", color="gray"),
             spacing="0",
             align="start",
         ),
