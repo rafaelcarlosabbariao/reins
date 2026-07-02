@@ -1,4 +1,8 @@
-# REINS — Resourcing Insights & Strategy
+<p align="center">
+  <img src="assets/logo/reins_logo.png" width="108" alt="REINS logo"/>
+</p>
+
+<h1 align="center">REINS — Resourcing Insights &amp; Strategy</h1>
 
 **A clinical development & operations resourcing dashboard.**
 Point REINS at a clinical trial and it shows you the **resourcing demand that
